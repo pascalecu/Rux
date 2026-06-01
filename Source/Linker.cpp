@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <expected>
 #include <fstream>
 #include <map>
 #include <memory>
@@ -377,112 +378,175 @@ namespace Rux {
         return fs::is_regular_file(path, ec);
     }
 
-#if RUX_OS_WINDOWS
-    static std::optional<std::vector<std::uint8_t>> ReadFileBytes(const fs::path& path) {
+    static std::optional<std::vector<std::byte>> ReadFileBytes(const fs::path& path) {
         std::ifstream in(path, std::ios::binary | std::ios::ate);
         if (!in) return std::nullopt;
+
         const auto size = in.tellg();
         if (size < 0) return std::nullopt;
 
-        std::vector<uint8_t> data(static_cast<size_t>(size));
+        std::vector<std::byte> data(static_cast<size_t>(size));
+
         in.seekg(0);
-        if (!data.empty()) in.read(reinterpret_cast<char*>(data.data()), static_cast<std::streamsize>(data.size()));
+        if (!data.empty()) {
+            in.read(reinterpret_cast<char*>(data.data()), static_cast<std::streamsize>(data.size()));
+        }
 
         if (!in && !in.eof()) return std::nullopt;
+
         return data;
     }
 
+#if RUX_OS_WINDOWS
+    enum class PeError { OutOfBounds, BadHeader, MissingSection, InvalidRva, CorruptDirectory };
+
+    template <typename T>
+    using PeResult = std::expected<T, PeError>;
+
     struct PeSection {
-        uint32_t virtualAddress;
-        uint32_t virtualSize;
-        uint32_t rawPtr;
-        uint32_t rawSize;
+        uint32_t va{};
+        uint32_t vsz{};
+        uint32_t raw{};
+        uint32_t rawSize{};
     };
 
-    static std::optional<size_t> RvaToOffset(const std::vector<PeSection>& sections, uint32_t rva) {
-        for (const auto& sec : sections) {
-            const uint32_t span = std::max(sec.virtualSize, sec.rawSize);
-            const uint32_t offset = rva - sec.virtualAddress;
-
-            if (offset < span) {
-                return static_cast<size_t>(sec.rawPtr) + offset;
-            }
+    class PeImage {
+    public:
+        explicit PeImage(std::vector<std::byte> data)
+            : data_(std::move(data))
+            , r_(data_) {
         }
-        return std::nullopt;
-    }
+
+        bool Load() {
+            auto peOff = r_.Read<uint32_t>(0x3C);
+            if (!peOff || *peOff + 24 > r_.Size()) return false;
+
+            peOff_ = *peOff;
+
+            if (r_.ReadString(peOff_, 4).value_or("") != "PE\0\0") return false;
+
+            auto secCount = r_.Read<uint16_t>(peOff_ + 6);
+            auto optSize = r_.Read<uint16_t>(peOff_ + 20);
+            auto magic = r_.Read<uint16_t>(peOff_ + 24);
+
+            if (!secCount || !optSize || !magic) return false;
+
+            const size_t optOff = peOff_ + 24;
+            const size_t secTable = optOff + *optSize;
+
+            sections_.clear();
+            sections_.reserve(*secCount);
+
+            for (uint16_t i = 0; i < *secCount; ++i) {
+                size_t off = secTable + i * 40;
+
+                auto vsz = r_.Read<uint32_t>(off + 8);
+                auto va = r_.Read<uint32_t>(off + 12);
+                auto rsz = r_.Read<uint32_t>(off + 16);
+                auto rp = r_.Read<uint32_t>(off + 20);
+
+                if (!vsz || !va || !rsz || !rp) return false;
+
+                sections_.push_back({*va, *vsz, *rp, *rsz});
+            }
+
+            std::ranges::sort(sections_, [](auto& a, auto& b) { return a.va < b.va; });
+
+            const size_t dir = optOff + (*magic == 0x020B ? 112 : 96);
+
+            auto expRva = r_.Read<uint32_t>(dir);
+            auto expSz = r_.Read<uint32_t>(dir + 4);
+
+            if (!expRva || !expSz) return false;
+
+            exportRva_ = *expRva;
+            exportSize_ = *expSz;
+
+            return true;
+        }
+
+        [[nodiscard]] const BinaryReader& Reader() const {
+            return r_;
+        }
+
+        [[nodiscard]] uint32_t ExportRva() const {
+            return exportRva_;
+        }
+
+        [[nodiscard]] uint32_t ExportSize() const {
+            return exportSize_;
+        }
+
+
+        PeResult<size_t> RvaToOffset(uint32_t rva) const {
+            size_t l = 0, r = sections_.size();
+
+            while (l < r) {
+                size_t m = (l + r) / 2;
+                const auto& s = sections_[m];
+
+                uint32_t size = std::max(s.vsz, s.rawSize);
+
+                if (rva < s.va) {
+                    r = m;
+                    continue;
+                }
+
+                if (rva >= s.va && rva < s.va + size) {
+                    return static_cast<size_t>(s.raw + (rva - s.va));
+                }
+
+                l = m + 1;
+            }
+
+            return std::unexpected(PeError::InvalidRva);
+        }
+
+    private:
+        std::vector<std::byte> data_;
+        BinaryReader r_;
+
+        std::vector<PeSection> sections_;
+
+        size_t peOff_{0};
+        uint32_t exportRva_{0};
+        uint32_t exportSize_{0};
+    };
 
     static std::optional<std::unordered_set<std::string>> ReadDllExports(const fs::path& path) {
-        auto peData = ReadFileBytes(path);
-        if (!peData) return std::nullopt;
+        auto dataOpt = ReadFileBytes(path);
+        if (!dataOpt) return std::nullopt;
 
-        BinaryReader reader(*peData);
+        PeImage pe(std::move(*dataOpt));
+        if (!pe.Load()) return std::nullopt;
 
-        auto peOff32 = reader.Read<uint32_t>(0x3C);
-        if (!peOff32 || *peOff32 >= reader.Size()) return std::nullopt;
+        const auto& r = pe.Reader();
 
-        const size_t peOff = *peOff32;
-        auto span = reader.Span();
-        if (peOff + 24 > reader.Size() || span[peOff] != 'P' || span[peOff + 1] != 'E' || span[peOff + 2] != 0 ||
-            span[peOff + 3] != 0) {
-            return std::nullopt;
-        }
+        auto expOff = pe.RvaToOffset(pe.ExportRva());
+        if (!expOff) return std::nullopt;
 
-        auto sectionCount = reader.Read<uint16_t>(peOff + 6);
-        auto optionalSize = reader.Read<uint16_t>(peOff + 20);
-        auto magic = reader.Read<uint16_t>(peOff + 24);
+        auto nameCount = r.Read<uint32_t>(*expOff + 24);
+        auto namesRva = r.Read<uint32_t>(*expOff + 32);
 
-        if (!sectionCount || !optionalSize || !magic) return std::nullopt;
-
-        const size_t optionalOff = peOff + 24;
-        const size_t dataDirOff = (*magic == 0x020B) ? optionalOff + 112 : optionalOff + 96;
-
-        auto exportRva = reader.Read<uint32_t>(dataDirOff);
-        auto exportSize = reader.Read<uint32_t>(dataDirOff + 4);
-
-        if (!exportRva || !exportSize) return std::nullopt;
-
-        std::unordered_set<std::string> exports;
-        if (*exportRva == 0 || *exportSize == 0) return exports;
-
-        // Cache section headers once
-        const size_t sectionTable = optionalOff + *optionalSize;
-        std::vector<PeSection> sections;
-        sections.reserve(*sectionCount);
-
-        for (uint16_t i = 0; i < *sectionCount; ++i) {
-            const size_t sec = sectionTable + static_cast<size_t>(i) * 40;
-            auto vSize = reader.Read<uint32_t>(sec + 8);
-            auto vAddr = reader.Read<uint32_t>(sec + 12);
-            auto rSize = reader.Read<uint32_t>(sec + 16);
-            auto rPtr = reader.Read<uint32_t>(sec + 20);
-
-            if (!vSize || !vAddr || !rSize || !rPtr) return std::nullopt;
-            sections.push_back({*vAddr, *vSize, *rPtr, *rSize});
-        }
-
-        auto exportOff = RvaToOffset(sections, *exportRva);
-        if (!exportOff || *exportOff + 40 > reader.Size()) return std::nullopt;
-
-        auto nameCount = reader.Read<uint32_t>(*exportOff + 24);
-        auto namesRva = reader.Read<uint32_t>(*exportOff + 32);
         if (!nameCount || !namesRva) return std::nullopt;
 
-        auto namesOff = RvaToOffset(sections, *namesRva);
+        auto namesOff = pe.RvaToOffset(*namesRva);
         if (!namesOff) return std::nullopt;
 
+        std::unordered_set<std::string> exports;
         exports.reserve(*nameCount);
 
         for (uint32_t i = 0; i < *nameCount; ++i) {
-            auto nameRva = reader.Read<uint32_t>(*namesOff + static_cast<size_t>(i) * 4);
+            auto nameRva = r.Read<uint32_t>(*namesOff + i * 4);
             if (!nameRva) return std::nullopt;
 
-            auto nameOff = RvaToOffset(sections, *nameRva);
+            auto nameOff = pe.RvaToOffset(*nameRva);
             if (!nameOff) return std::nullopt;
 
-            auto name = reader.ReadCString(*nameOff);
+            auto name = r.ReadCString(*nameOff);
             if (!name) return std::nullopt;
 
-            exports.insert(std::string(*name));
+            exports.emplace(*name);
         }
 
         return exports;
