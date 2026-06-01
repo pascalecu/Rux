@@ -369,10 +369,6 @@ namespace Rux {
     [[maybe_unused]] static constexpr uint16_t kDllChars = 0x8100u;
 #endif
 
-    [[maybe_unused]] static uint32_t AlignUp(uint32_t v, uint32_t a) {
-        return (v + a - 1) & ~(a - 1);
-    }
-
     static bool FileExists(const fs::path& path) {
         std::error_code ec;
         return fs::is_regular_file(path, ec);
@@ -860,24 +856,24 @@ namespace Rux {
         // 5. Compute section layout (RVAs and file offsets)
         const uint32_t numSections = mergedData.empty() ? 2u : 3u;
         const uint32_t rawHdrBytes = 64 + 4 + 20 + 240 + numSections * 40;
-        const uint32_t sizeOfHeaders = AlignUp(rawHdrBytes, kFileAlign);
-        const uint32_t textRva = AlignUp(sizeOfHeaders, kSecAlign);
+        const uint32_t sizeOfHeaders = Detail::AlignUp(rawHdrBytes, kFileAlign);
+        const uint32_t textRva = Detail::AlignUp(sizeOfHeaders, kSecAlign);
         const uint32_t textVirtSize = preambleSize + static_cast<uint32_t>(mergedText.size());
-        const uint32_t textFileSize = AlignUp(textVirtSize, kFileAlign);
+        const uint32_t textFileSize = Detail::AlignUp(textVirtSize, kFileAlign);
         const uint32_t textFileOff = sizeOfHeaders;
-        const uint32_t rdataRva = textRva + AlignUp(textVirtSize, kSecAlign);
+        const uint32_t rdataRva = textRva + Detail::AlignUp(textVirtSize, kSecAlign);
         const uint32_t rdataVirtSize = static_cast<uint32_t>(rdataBuf.size());
-        const uint32_t rdataFileSize = AlignUp(rdataVirtSize, kFileAlign);
+        const uint32_t rdataFileSize = Detail::AlignUp(rdataVirtSize, kFileAlign);
         const uint32_t rdataFileOff = textFileOff + textFileSize;
         uint32_t dataRva = 0, dataVirtSize = 0, dataFileSize = 0, dataFileOff = 0;
         if (!mergedData.empty()) {
-            dataRva = rdataRva + AlignUp(rdataVirtSize, kSecAlign);
+            dataRva = rdataRva + Detail::AlignUp(rdataVirtSize, kSecAlign);
             dataVirtSize = static_cast<uint32_t>(mergedData.size());
-            dataFileSize = AlignUp(dataVirtSize, kFileAlign);
+            dataFileSize = Detail::AlignUp(dataVirtSize, kFileAlign);
             dataFileOff = rdataFileOff + rdataFileSize;
         }
-        const uint32_t sizeOfImage = !mergedData.empty() ? dataRva + AlignUp(dataVirtSize, kSecAlign)
-                                                         : rdataRva + AlignUp(rdataVirtSize, kSecAlign);
+        const uint32_t sizeOfImage = !mergedData.empty() ? dataRva + Detail::AlignUp(dataVirtSize, kSecAlign)
+                                                         : rdataRva + Detail::AlignUp(rdataVirtSize, kSecAlign);
 
         // 6. Patch .rdata import table with real RVAs
         for (size_t g = 0; g < importDllNames.size(); ++g) {
@@ -1154,7 +1150,7 @@ namespace Rux {
         const auto wBuf = [&](const Buf& b) { writeRaw(b.data(), b.size()); };
         const auto padTo = [&](uint32_t align) {
             auto pos = static_cast<uint32_t>(out.tellp());
-            uint32_t pad = AlignUp(pos, align) - pos;
+            uint32_t pad = Detail::AlignUp(pos, align) - pos;
             static constexpr uint8_t Z[kFileAlign] = {};
             writeRaw(Z, pad);
         };
