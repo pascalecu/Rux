@@ -6,7 +6,7 @@
 
 #include "Rux/Linker.h"
 
-#include "Rux/Platform/Defines.h"
+#include "Rux/Platform.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -33,6 +33,156 @@
 #endif
 
 namespace Rux {
+
+    using namespace Platform;
+
+    template <typename T>
+    concept ByteSwappableIntegral = std::integral<T> && !std::is_same_v<T, bool> && !std::is_same_v<T, char> &&
+        !std::is_same_v<T, wchar_t> && !std::is_same_v<T, char16_t> && !std::is_same_v<T, char32_t>;
+
+    class BinaryBuffer {
+    public:
+        using value_type = uint8_t;
+
+        template <std::integral T>
+        void Write(T value) {
+            T prepared = ToLittleEndian(value);
+            const auto* ptr = reinterpret_cast<const uint8_t*>(&prepared);
+            data.insert(data.end(), ptr, ptr + sizeof(T));
+        }
+
+        void WriteBytes(std::span<const uint8_t> bytes) {
+            data.insert(data.end(), bytes.begin(), bytes.end());
+        }
+
+        void WriteZeros(size_t count) {
+            data.insert(data.end(), count, 0);
+        }
+
+        void WriteCString(std::string_view s) {
+            data.insert(data.end(), s.begin(), s.end());
+            data.push_back(0);
+        }
+
+        void WriteName8(std::string_view s) {
+            char name[8] = {0};
+            std::memcpy(name, s.data(), std::min(s.size(), size_t(8)));
+            const auto* ptr = reinterpret_cast<const uint8_t*>(name);
+            data.insert(data.end(), ptr, ptr + 8);
+        }
+
+        template <std::integral T>
+        void Patch(size_t offset, T value) {
+            assert(offset + sizeof(T) <= data.size());
+            T prepared = ToLittleEndian(value);
+            std::memcpy(data.data() + offset, &prepared, sizeof(T));
+        }
+
+        template <std::integral T>
+        [[nodiscard]] size_t Reserve() {
+            const auto off = data.size();
+            Write<T>(0);
+            return off;
+        }
+
+        [[nodiscard]] size_t Reserve(size_t bytes) {
+            const auto off = data.size();
+            WriteZeros(bytes);
+            return off;
+        }
+
+        void PadTo(size_t align, uint8_t fill = 0) {
+            assert(align != 0);
+            size_t current = data.size();
+            size_t padding = 0;
+
+            // Branchless bitwise padding check for standard power-of-two binary alignments
+            if ((align & (align - 1)) == 0) {
+                padding = ((current + align - 1) & ~(align - 1)) - current;
+            }
+            else {
+                padding = (align - (current % align)) % align;
+            }
+            if (padding > 0) data.insert(data.end(), padding, fill);
+        }
+
+        void ReserveCapacity(size_t bytes) {
+            data.reserve(bytes);
+        }
+
+        [[nodiscard]] size_t Offset() const {
+            return data.size();
+        }
+        [[nodiscard]] size_t Size() const {
+            return data.size();
+        }
+        [[nodiscard]] bool Empty() const {
+            return data.empty();
+        }
+        [[nodiscard]] const uint8_t* Data() const {
+            return data.data();
+        }
+        [[nodiscard]] std::span<const uint8_t> Span() const {
+            return data;
+        }
+        [[nodiscard]] const std::vector<uint8_t>& Bytes() const {
+            return data;
+        }
+
+        template <std::integral T>
+        [[nodiscard]] static constexpr T ToLittleEndian(T value) {
+            if constexpr (HostEndianness == Endian::Big && ByteSwappableIntegral<T>) {
+                return std::byteswap(value);
+            }
+            return value;
+        }
+
+    private:
+        std::vector<uint8_t> data;
+    };
+
+    class BinaryReader {
+    public:
+        explicit BinaryReader(std::span<const uint8_t> bytes)
+            : bytes(bytes) {
+        }
+
+        template <std::integral T>
+        [[nodiscard]] std::optional<T> Read(size_t offset) const {
+            if (offset + sizeof(T) > bytes.size()) return std::nullopt;
+            T value;
+            std::memcpy(&value, bytes.data() + offset, sizeof(T));
+            return BinaryBuffer::ToLittleEndian(value);
+        }
+
+        [[nodiscard]] bool Contains(size_t offset, size_t size) const {
+            return offset <= bytes.size() && size <= bytes.size() - offset;
+        }
+
+        [[nodiscard]] std::optional<std::string_view> ReadCString(size_t offset) const {
+            if (offset >= bytes.size()) return std::nullopt;
+
+            const uint8_t* start = bytes.data() + offset;
+            const size_t max_search = bytes.size() - offset;
+
+            const void* found = std::memchr(start, 0, max_search);
+            if (!found) return std::nullopt;
+
+            const auto* null_term = static_cast<const uint8_t*>(found);
+            return std::string_view(reinterpret_cast<const char*>(start), null_term - start);
+        }
+
+        [[nodiscard]] size_t Size() const {
+            return bytes.size();
+        }
+        [[nodiscard]] std::span<const uint8_t> Span() const {
+            return bytes;
+        }
+
+    private:
+        std::span<const uint8_t> bytes;
+    };
+
 #if RUX_OS_WINDOWS
     // PE32+ layout constants
     [[maybe_unused]] static constexpr uint64_t kImageBase = 0x140000000ULL;
@@ -59,65 +209,8 @@ namespace Rux {
     [[maybe_unused]] static constexpr uint16_t kDllChars = 0x8100u;
 #endif
 
-    // Buffer helpers
-    using Buf = std::vector<uint8_t>;
-
-    [[maybe_unused]] static void WriteU8(Buf& b, uint8_t v) {
-        b.push_back(v);
-    }
-
-    [[maybe_unused]] static void WriteU16(Buf& b, uint16_t v) {
-        b.push_back(v & 0xFF);
-        b.push_back(v >> 8);
-    }
-
-    [[maybe_unused]] static void WriteU32(Buf& b, uint32_t v) {
-        b.push_back(v & 0xFF);
-        b.push_back((v >> 8) & 0xFF);
-        b.push_back((v >> 16) & 0xFF);
-        b.push_back((v >> 24) & 0xFF);
-    }
-
-    [[maybe_unused]] static void WriteU64(Buf& b, uint64_t v) {
-        for (int i = 0; i < 8; ++i)
-            b.push_back(static_cast<uint8_t>(v >> (i * 8)));
-    }
-
-    [[maybe_unused]] static void WriteZeros(Buf& b, size_t n) {
-        b.insert(b.end(), n, 0);
-    }
-
-    [[maybe_unused]] static void WriteCStr(Buf& b, const char* s) {
-        while (*s)
-            b.push_back(*s++);
-        b.push_back(0);
-    }
-
-    [[maybe_unused]] static void WriteName8(Buf& b, const char* s) {
-        size_t len = std::strlen(s);
-        for (size_t i = 0; i < 8; ++i)
-            b.push_back(i < len ? static_cast<uint8_t>(s[i]) : 0);
-    }
-
-    [[maybe_unused]] static void PadTo(Buf& b, size_t align, uint8_t fill = 0) {
-        while (b.size() % align)
-            b.push_back(fill);
-    }
-
     [[maybe_unused]] static uint32_t AlignUp(uint32_t v, uint32_t a) {
         return (v + a - 1) & ~(a - 1);
-    }
-
-    static void Patch32(Buf& b, size_t off, uint32_t v) {
-        b[off] = v & 0xFF;
-        b[off + 1] = (v >> 8) & 0xFF;
-        b[off + 2] = (v >> 16) & 0xFF;
-        b[off + 3] = (v >> 24) & 0xFF;
-    }
-
-    static void Patch64(Buf& b, size_t off, uint64_t v) {
-        for (int i = 0; i < 8; ++i)
-            b[off + i] = static_cast<uint8_t>(v >> (i * 8));
     }
 
     static bool FileExists(const std::filesystem::path& path) {
@@ -126,107 +219,111 @@ namespace Rux {
     }
 
 #if RUX_OS_WINDOWS
-    static std::optional<Buf> ReadFileBytes(const std::filesystem::path& path) {
+    static std::optional<std::vector<std::uint8_t>> ReadFileBytes(const std::filesystem::path& path) {
         std::ifstream in(path, std::ios::binary | std::ios::ate);
         if (!in) return std::nullopt;
         const auto size = in.tellg();
         if (size < 0) return std::nullopt;
-        Buf data(static_cast<size_t>(size));
+
+        std::vector<uint8_t> data(static_cast<size_t>(size));
         in.seekg(0);
         if (!data.empty()) in.read(reinterpret_cast<char*>(data.data()), static_cast<std::streamsize>(data.size()));
+
         if (!in && !in.eof()) return std::nullopt;
         return data;
     }
 
-    static bool ReadU16At(const Buf& b, size_t off, uint16_t& out) {
-        if (off + 2 > b.size()) return false;
-        out = static_cast<uint16_t>(b[off] | (b[off + 1] << 8));
-        return true;
-    }
+    struct PeSection {
+        uint32_t virtualAddress;
+        uint32_t virtualSize;
+        uint32_t rawPtr;
+        uint32_t rawSize;
+    };
 
-    static bool ReadU32At(const Buf& b, size_t off, uint32_t& out) {
-        if (off + 4 > b.size()) return false;
-        out = static_cast<uint32_t>(b[off]) | (static_cast<uint32_t>(b[off + 1]) << 8) |
-            (static_cast<uint32_t>(b[off + 2]) << 16) | (static_cast<uint32_t>(b[off + 3]) << 24);
-        return true;
-    }
+    static std::optional<size_t> RvaToOffset(const std::vector<PeSection>& sections, uint32_t rva) {
+        for (const auto& sec : sections) {
+            const uint32_t span = std::max(sec.virtualSize, sec.rawSize);
+            const uint32_t offset = rva - sec.virtualAddress;
 
-    static std::optional<size_t>
-    PeRvaToOffset(const Buf& pe, uint32_t rva, size_t sectionTable, uint16_t sectionCount) {
-        for (uint16_t i = 0; i < sectionCount; ++i) {
-            const size_t sec = sectionTable + static_cast<size_t>(i) * 40;
-            uint32_t virtualSize = 0, virtualAddress = 0, rawSize = 0, rawPtr = 0;
-            if (!ReadU32At(pe, sec + 8, virtualSize) || !ReadU32At(pe, sec + 12, virtualAddress) ||
-                !ReadU32At(pe, sec + 16, rawSize) || !ReadU32At(pe, sec + 20, rawPtr))
-                return std::nullopt;
-
-            const uint32_t span = std::max(virtualSize, rawSize);
-            if (rva >= virtualAddress && rva < virtualAddress + span) {
-                const size_t off = static_cast<size_t>(rawPtr) + (rva - virtualAddress);
-                if (off < pe.size()) return off;
-                return std::nullopt;
+            if (offset < span) {
+                return static_cast<size_t>(sec.rawPtr) + offset;
             }
         }
         return std::nullopt;
     }
 
-    static bool ReadPeCString(const Buf& pe, size_t off, std::string& out) {
-        if (off >= pe.size()) return false;
-        out.clear();
-        while (off < pe.size() && pe[off] != 0)
-            out.push_back(static_cast<char>(pe[off++]));
-        return off < pe.size();
-    }
-
-    [[maybe_unused]] static std::optional<std::unordered_set<std::string>>
-    ReadDllExports(const std::filesystem::path& path) {
+    static std::optional<std::unordered_set<std::string>> ReadDllExports(const std::filesystem::path& path) {
         auto peData = ReadFileBytes(path);
         if (!peData) return std::nullopt;
-        const Buf& pe = *peData;
 
-        uint32_t peOff32 = 0;
-        if (pe.size() < 0x40 || !ReadU32At(pe, 0x3C, peOff32)) return std::nullopt;
-        const size_t peOff = peOff32;
-        if (peOff + 24 > pe.size() || pe[peOff] != 'P' || pe[peOff + 1] != 'E' || pe[peOff + 2] != 0 ||
-            pe[peOff + 3] != 0)
-            return std::nullopt;
+        BinaryReader reader(*peData);
 
-        uint16_t sectionCount = 0, optionalSize = 0, magic = 0;
-        if (!ReadU16At(pe, peOff + 6, sectionCount) || !ReadU16At(pe, peOff + 20, optionalSize) ||
-            !ReadU16At(pe, peOff + 24, magic))
+        auto peOff32 = reader.Read<uint32_t>(0x3C);
+        if (!peOff32 || *peOff32 >= reader.Size()) return std::nullopt;
+
+        const size_t peOff = *peOff32;
+        auto span = reader.Span();
+        if (peOff + 24 > reader.Size() || span[peOff] != 'P' || span[peOff + 1] != 'E' || span[peOff + 2] != 0 ||
+            span[peOff + 3] != 0) {
             return std::nullopt;
+        }
+
+        auto sectionCount = reader.Read<uint16_t>(peOff + 6);
+        auto optionalSize = reader.Read<uint16_t>(peOff + 20);
+        auto magic = reader.Read<uint16_t>(peOff + 24);
+
+        if (!sectionCount || !optionalSize || !magic) return std::nullopt;
 
         const size_t optionalOff = peOff + 24;
-        const size_t dataDirOff = magic == 0x020B ? optionalOff + 112 : optionalOff + 96;
-        uint32_t exportRva = 0, exportSize = 0;
-        if (dataDirOff + 8 > optionalOff + optionalSize || !ReadU32At(pe, dataDirOff, exportRva) ||
-            !ReadU32At(pe, dataDirOff + 4, exportSize))
-            return std::nullopt;
+        const size_t dataDirOff = (*magic == 0x020B) ? optionalOff + 112 : optionalOff + 96;
+
+        auto exportRva = reader.Read<uint32_t>(dataDirOff);
+        auto exportSize = reader.Read<uint32_t>(dataDirOff + 4);
+
+        if (!exportRva || !exportSize) return std::nullopt;
 
         std::unordered_set<std::string> exports;
-        if (exportRva == 0 || exportSize == 0) return exports;
+        if (*exportRva == 0 || *exportSize == 0) return exports;
 
-        const size_t sectionTable = optionalOff + optionalSize;
-        auto exportOff = PeRvaToOffset(pe, exportRva, sectionTable, sectionCount);
-        if (!exportOff || *exportOff + 40 > pe.size()) return std::nullopt;
+        // Cache section headers once
+        const size_t sectionTable = optionalOff + *optionalSize;
+        std::vector<PeSection> sections;
+        sections.reserve(*sectionCount);
 
-        uint32_t nameCount = 0, namesRva = 0;
-        if (!ReadU32At(pe, *exportOff + 24, nameCount) || !ReadU32At(pe, *exportOff + 32, namesRva))
-            return std::nullopt;
+        for (uint16_t i = 0; i < *sectionCount; ++i) {
+            const size_t sec = sectionTable + static_cast<size_t>(i) * 40;
+            auto vSize = reader.Read<uint32_t>(sec + 8);
+            auto vAddr = reader.Read<uint32_t>(sec + 12);
+            auto rSize = reader.Read<uint32_t>(sec + 16);
+            auto rPtr = reader.Read<uint32_t>(sec + 20);
 
-        auto namesOff = PeRvaToOffset(pe, namesRva, sectionTable, sectionCount);
+            if (!vSize || !vAddr || !rSize || !rPtr) return std::nullopt;
+            sections.push_back({*vAddr, *vSize, *rPtr, *rSize});
+        }
+
+        auto exportOff = RvaToOffset(sections, *exportRva);
+        if (!exportOff || *exportOff + 40 > reader.Size()) return std::nullopt;
+
+        auto nameCount = reader.Read<uint32_t>(*exportOff + 24);
+        auto namesRva = reader.Read<uint32_t>(*exportOff + 32);
+        if (!nameCount || !namesRva) return std::nullopt;
+
+        auto namesOff = RvaToOffset(sections, *namesRva);
         if (!namesOff) return std::nullopt;
 
-        for (uint32_t i = 0; i < nameCount; ++i) {
-            uint32_t nameRva = 0;
-            if (!ReadU32At(pe, *namesOff + static_cast<size_t>(i) * 4, nameRva)) return std::nullopt;
+        exports.reserve(*nameCount);
 
-            auto nameOff = PeRvaToOffset(pe, nameRva, sectionTable, sectionCount);
+        for (uint32_t i = 0; i < *nameCount; ++i) {
+            auto nameRva = reader.Read<uint32_t>(*namesOff + static_cast<size_t>(i) * 4);
+            if (!nameRva) return std::nullopt;
+
+            auto nameOff = RvaToOffset(sections, *nameRva);
             if (!nameOff) return std::nullopt;
 
-            std::string name;
-            if (!ReadPeCString(pe, *nameOff, name)) return std::nullopt;
-            exports.insert(std::move(name));
+            auto name = reader.ReadCString(*nameOff);
+            if (!name) return std::nullopt;
+
+            exports.insert(std::string(*name));
         }
 
         return exports;
