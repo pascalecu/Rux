@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <concepts>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -38,151 +39,307 @@ namespace Rux {
     using namespace Platform;
     namespace fs = std::filesystem;
 
-    template <typename T>
-    concept ByteSwappableIntegral = std::integral<T> && !std::is_same_v<T, bool> && !std::is_same_v<T, char> &&
-        !std::is_same_v<T, wchar_t> && !std::is_same_v<T, char16_t> && !std::is_same_v<T, char32_t>;
 
-    class BinaryBuffer {
-    public:
-        using value_type = uint8_t;
+    namespace Detail {
+        template <typename T, typename... U>
+        concept NoneOf = (!std::same_as<T, U> && ...);
 
-        template <std::integral T>
-        void Write(T value) {
-            T prepared = ToLittleEndian(value);
-            const auto* ptr = reinterpret_cast<const uint8_t*>(&prepared);
-            data.insert(data.end(), ptr, ptr + sizeof(T));
-        }
+        template <typename T>
+        concept EndianConvertible =
+            std::integral<T> && NoneOf<std::remove_cv_t<T>, bool, char, char8_t, char16_t, char32_t, wchar_t>;
 
-        void WriteBytes(std::span<const uint8_t> bytes) {
-            data.insert(data.end(), bytes.begin(), bytes.end());
-        }
-
-        void WriteZeros(size_t count) {
-            data.insert(data.end(), count, 0);
-        }
-
-        void WriteCString(std::string_view s) {
-            data.insert(data.end(), s.begin(), s.end());
-            data.push_back(0);
-        }
-
-        void WriteName8(std::string_view s) {
-            char name[8] = {0};
-            std::memcpy(name, s.data(), std::min(s.size(), size_t(8)));
-            const auto* ptr = reinterpret_cast<const uint8_t*>(name);
-            data.insert(data.end(), ptr, ptr + 8);
-        }
-
-        template <std::integral T>
-        void Patch(size_t offset, T value) {
-            assert(offset + sizeof(T) <= data.size());
-            T prepared = ToLittleEndian(value);
-            std::memcpy(data.data() + offset, &prepared, sizeof(T));
-        }
-
-        template <std::integral T>
-        [[nodiscard]] size_t Reserve() {
-            const auto off = data.size();
-            Write<T>(0);
-            return off;
-        }
-
-        [[nodiscard]] size_t Reserve(size_t bytes) {
-            const auto off = data.size();
-            WriteZeros(bytes);
-            return off;
-        }
-
-        void PadTo(size_t align, uint8_t fill = 0) {
-            assert(align != 0);
-            size_t current = data.size();
-            size_t padding = 0;
-
-            // Branchless bitwise padding check for standard power-of-two binary alignments
-            if ((align & (align - 1)) == 0) {
-                padding = ((current + align - 1) & ~(align - 1)) - current;
-            }
-            else {
-                padding = (align - (current % align)) % align;
-            }
-            if (padding > 0) data.insert(data.end(), padding, fill);
-        }
-
-        void ReserveCapacity(size_t bytes) {
-            data.reserve(bytes);
-        }
-
-        [[nodiscard]] size_t Offset() const {
-            return data.size();
-        }
-        [[nodiscard]] size_t Size() const {
-            return data.size();
-        }
-        [[nodiscard]] bool Empty() const {
-            return data.empty();
-        }
-        [[nodiscard]] const uint8_t* Data() const {
-            return data.data();
-        }
-        [[nodiscard]] std::span<const uint8_t> Span() const {
-            return data;
-        }
-        [[nodiscard]] const std::vector<uint8_t>& Bytes() const {
-            return data;
-        }
-
-        template <std::integral T>
-        [[nodiscard]] static constexpr T ToLittleEndian(T value) {
-            if constexpr (HostEndianness == Endian::Big && ByteSwappableIntegral<T>) {
+        template <EndianConvertible T>
+        [[nodiscard]]
+        constexpr T ByteSwapIfBigEndian(T value) {
+            if constexpr (HostEndianness == Endian::Big) {
                 return std::byteswap(value);
             }
+
             return value;
         }
 
+        [[nodiscard]]
+        constexpr size_t AlignUp(size_t value, size_t alignment) {
+            assert(alignment != 0);
+
+            if (std::has_single_bit(alignment)) {
+                return (value + alignment - 1) & ~(alignment - 1);
+            }
+
+            return ((value + alignment - 1) / alignment) * alignment;
+        }
+
+        template <typename T>
+        concept TriviallySerializable = std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>;
+    } // namespace Detail
+
+    namespace Bytes {
+        constexpr std::byte B(std::integral auto v) noexcept {
+            return std::byte{static_cast<std::uint8_t>(v)};
+        }
+
+        template <std::integral... Ts>
+        constexpr std::array<std::byte, sizeof...(Ts)> Pack(Ts... v) noexcept {
+            return {std::byte{static_cast<std::uint8_t>(v)}...};
+        }
+
+        inline std::span<const std::byte> FromString(std::string_view s) noexcept {
+            return std::as_bytes(std::span{s});
+        }
+
+        template <std::size_t N>
+        constexpr std::span<const std::byte, N> FromArray(const std::array<std::byte, N>& a) noexcept {
+            return std::span{a};
+        }
+
+        template <std::integral... Ts>
+        constexpr auto PackSpan(Ts... v) {
+            return Pack(v...); // usable directly as span
+        }
+    } // namespace Bytes
+
+    class BinaryWriter {
+    public:
+        using Byte = std::byte;
+
+        [[nodiscard]] size_t Position() const noexcept {
+            return pos_;
+        }
+        [[nodiscard]] size_t Size() const noexcept {
+            return buf_.size();
+        }
+        [[nodiscard]] bool Empty() const noexcept {
+            return buf_.empty();
+        }
+
+        [[nodiscard]] std::span<const Byte> Span() const noexcept {
+            return buf_;
+        }
+
+        void WriteBytes(std::span<const Byte> b) {
+            Ensure(b.size());
+            std::memcpy(buf_.data() + pos_, b.data(), b.size());
+            pos_ += b.size();
+        }
+
+        void WriteBytes(std::span<const std::uint8_t> b) {
+            WriteBytes(std::as_bytes(b));
+        }
+
+        template <std::ranges::contiguous_range R>
+            requires std::same_as<std::ranges::range_value_t<R>, Byte>
+        void WriteBytes(const R& r) {
+            WriteBytes(std::span{std::ranges::data(r), std::ranges::size(r)});
+        }
+
+        void Write(Byte b) {
+            WriteBytes(std::span{&b, 1});
+        }
+
+        void Write(std::uint8_t v) {
+            Write(Byte{v});
+        }
+
+        template <Detail::EndianConvertible T>
+        void Write(T v) {
+            v = Detail::ByteSwapIfBigEndian(v);
+            WriteBytes(std::as_bytes(std::span{&v, 1}));
+        }
+
+        template <Detail::TriviallySerializable T>
+        void WriteStruct(const T& v) {
+            WriteBytes(std::as_bytes(std::span{&v, 1}));
+        }
+
+        template <Detail::TriviallySerializable T>
+        void WriteSpan(std::span<const T> v) {
+            WriteBytes(std::as_bytes(v));
+        }
+
+        void WriteString(std::string_view s, bool nullTerminated = false) {
+            WriteBytes(Bytes::FromString(s));
+            if (nullTerminated) Write(Byte{0});
+        }
+
+        void WriteCString(std::string_view s) {
+            WriteString(s, true);
+        }
+
+        void WriteName8(std::string_view s) {
+            std::array<Byte, 8> buf{};
+            std::memcpy(buf.data(), s.data(), std::min(s.size(), buf.size()));
+            WriteBytes(buf);
+        }
+
+        void WriteZeros(size_t n) {
+            Ensure(n);
+            std::memset(buf_.data() + pos_, 0, n);
+            pos_ += n;
+        }
+
+        void Skip(size_t n) {
+            Ensure(n);
+            pos_ += n;
+        }
+
+        template <Detail::EndianConvertible T>
+        void Patch(size_t off, T v) {
+            assert(off + sizeof(T) <= buf_.size());
+            v = Detail::ByteSwapIfBigEndian(v);
+            std::memcpy(buf_.data() + off, &v, sizeof(T));
+        }
+
+        template <Detail::TriviallySerializable T>
+        void PatchStruct(size_t off, const T& v) {
+            assert(off + sizeof(T) <= buf_.size());
+            std::memcpy(buf_.data() + off, &v, sizeof(T));
+        }
+
+        template <Detail::EndianConvertible T>
+        [[nodiscard]] size_t Reserve() {
+            size_t off = pos_;
+            Write(T{});
+            return off;
+        }
+
+        [[nodiscard]] size_t ReserveBytes(size_t n) {
+            size_t off = pos_;
+            Skip(n);
+            return off;
+        }
+
+        [[nodiscard]] size_t AlignTo(size_t a, Byte fill = Byte{0}) {
+            size_t old = pos_;
+            size_t aligned = Detail::AlignUp(pos_, a);
+
+            Ensure(aligned - pos_);
+            std::memset(buf_.data() + pos_, std::to_integer<int>(fill), aligned - pos_);
+            pos_ = aligned;
+
+            return old;
+        }
+
     private:
-        std::vector<uint8_t> data;
+        std::vector<Byte> buf_;
+        size_t pos_ = 0;
+
+        void Ensure(size_t n) {
+            if (pos_ + n > buf_.size()) buf_.resize(pos_ + n);
+        }
     };
 
     class BinaryReader {
     public:
-        explicit BinaryReader(std::span<const uint8_t> bytes)
-            : bytes(bytes) {
+        using Byte = std::byte;
+
+        explicit BinaryReader(std::span<const Byte> b)
+            : data_(b) {
         }
 
-        template <std::integral T>
-        [[nodiscard]] std::optional<T> Read(size_t offset) const {
-            if (offset + sizeof(T) > bytes.size()) return std::nullopt;
-            T value;
-            std::memcpy(&value, bytes.data() + offset, sizeof(T));
-            return BinaryBuffer::ToLittleEndian(value);
+        [[nodiscard]] size_t Size() const noexcept {
+            return data_.size();
         }
 
-        [[nodiscard]] bool Contains(size_t offset, size_t size) const {
-            return offset <= bytes.size() && size <= bytes.size() - offset;
+        [[nodiscard]] size_t Remaining(size_t off) const noexcept {
+            return (off <= data_.size()) ? data_.size() - off : 0;
         }
 
-        [[nodiscard]] std::optional<std::string_view> ReadCString(size_t offset) const {
-            if (offset >= bytes.size()) return std::nullopt;
-
-            const uint8_t* start = bytes.data() + offset;
-            const size_t max_search = bytes.size() - offset;
-
-            const void* found = std::memchr(start, 0, max_search);
-            if (!found) return std::nullopt;
-
-            const auto* null_term = static_cast<const uint8_t*>(found);
-            return std::string_view(reinterpret_cast<const char*>(start), null_term - start);
+        [[nodiscard]] bool Contains(size_t off, size_t n) const noexcept {
+            return off <= data_.size() && n <= data_.size() - off;
         }
 
-        [[nodiscard]] size_t Size() const {
-            return bytes.size();
+        [[nodiscard]] std::span<const Byte> Span() const noexcept {
+            return data_;
         }
-        [[nodiscard]] std::span<const uint8_t> Span() const {
-            return bytes;
+
+        [[nodiscard]] std::span<const Byte> Subspan(size_t off, size_t n) const {
+            assert(Contains(off, n));
+            return data_.subspan(off, n);
+        }
+
+        [[nodiscard]] BinaryReader SubReader(size_t off) const {
+            assert(off <= data_.size());
+            return BinaryReader(data_.subspan(off));
+        }
+
+        template <Detail::EndianConvertible T>
+        [[nodiscard]] std::optional<T> Read(size_t off) const {
+            if (!Contains(off, sizeof(T))) return std::nullopt;
+
+            T v;
+            std::memcpy(&v, data_.data() + off, sizeof(T));
+            return Detail::ByteSwapIfBigEndian(v);
+        }
+
+        template <Detail::TriviallySerializable T>
+        [[nodiscard]] std::optional<T> ReadStruct(size_t off) const {
+            if (!Contains(off, sizeof(T))) return std::nullopt;
+
+            T v;
+            std::memcpy(&v, data_.data() + off, sizeof(T));
+            return v;
+        }
+
+        template <Detail::TriviallySerializable T>
+        [[nodiscard]] std::optional<std::span<const T>> ReadSpan(size_t off, size_t count) const {
+            if (!Contains(off, sizeof(T) * count)) return std::nullopt;
+
+            const T* ptr = reinterpret_cast<const T*>(data_.data() + off);
+            return std::span<const T>{ptr, count};
+        }
+
+        [[nodiscard]] std::optional<std::string_view> ReadCString(size_t off) const {
+            if (off >= data_.size()) return std::nullopt;
+
+            const auto* begin = data_.data() + off;
+            const size_t maxLen = data_.size() - off;
+
+            const auto* end = static_cast<const Byte*>(std::memchr(begin, 0, maxLen));
+
+            if (!end) return std::nullopt;
+
+            return std::string_view(reinterpret_cast<const char*>(begin), static_cast<size_t>(end - begin));
+        }
+
+        [[nodiscard]] std::optional<std::string_view> ReadString(size_t off, size_t len) const {
+            if (!Contains(off, len)) return std::nullopt;
+
+            const char* ptr = reinterpret_cast<const char*>(data_.data() + off);
+            return std::string_view(ptr, len);
+        }
+
+        [[nodiscard]] std::optional<std::span<const Byte>> ReadBytes(size_t off, size_t n) const {
+            if (!Contains(off, n)) return std::nullopt;
+            return data_.subspan(off, n);
+        }
+
+        template <typename T>
+            requires Detail::TriviallySerializable<T>
+        [[nodiscard]] std::optional<std::span<const T>> AsArray(size_t off) const {
+            if (!Contains(off, sizeof(T))) return std::nullopt;
+
+            const size_t count = (data_.size() - off) / sizeof(T);
+            const T* ptr = reinterpret_cast<const T*>(data_.data() + off);
+
+            return std::span<const T>{ptr, count};
+        }
+
+        template <Detail::EndianConvertible T>
+        [[nodiscard]] std::optional<T> ReadAndAdvance(size_t& off) const {
+            auto v = Read<T>(off);
+            if (v) off += sizeof(T);
+            return v;
+        }
+
+        template <Detail::TriviallySerializable T>
+        [[nodiscard]] std::optional<T> ReadStructAndAdvance(size_t& off) const {
+            auto v = ReadStruct<T>(off);
+            if (v) off += sizeof(T);
+            return v;
         }
 
     private:
-        std::span<const uint8_t> bytes;
+        std::span<const Byte> data_;
     };
 
 #if RUX_OS_WINDOWS
