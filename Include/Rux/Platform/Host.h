@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <bit>
+
 #include "ABI.h"
 #include "Defines.h"
 #include "Types.h"
@@ -56,11 +58,7 @@ namespace Rux::Platform {
     inline constexpr BuildMode HostBuildMode = RUX_BUILD_RELEASE ? BuildMode::Release : BuildMode::Debug;
 
     inline constexpr Endian HostEndianness = []() noexcept {
-#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-        return Endian::Big;
-#else
-        return Endian::Little;
-#endif
+        return (std::endian::native == std::endian::little) ? Endian::Little : Endian::Big;
     }();
 
     inline constexpr CpuFeatures HostCpuFeatures = []() noexcept {
