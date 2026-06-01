@@ -9,6 +9,7 @@
 #include "Rux/Platform.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -332,14 +333,21 @@ namespace Rux {
 
     static std::string GetPathEnv() {
 #if RUX_COMPILER_MSVC
-        char* value = nullptr;
-        size_t size = 0;
-        if (_dupenv_s(&value, &size, "PATH") != 0 || value == nullptr) return {};
-        std::unique_ptr<char, decltype(&std::free)> owned(value, &std::free);
-        return std::string(value, size > 0 ? size - 1 : 0);
+        char* buffer = nullptr;
+        size_t len = 0;
+
+        if (_dupenv_s(&buffer, &len, "PATH") != 0 || !buffer) return {};
+
+        std::unique_ptr<char, decltype(&std::free)> owned(buffer, &std::free);
+
+        if (len == 0) return {};
+
+        // len includes null terminator
+        return std::string(buffer, len - 1);
 #else
-        const char* value = std::getenv("PATH");
-        return value ? std::string(value) : std::string();
+        if (const char* value = std::getenv("PATH"); value && *value) return std::string(value);
+
+        return {};
 #endif
     }
 
