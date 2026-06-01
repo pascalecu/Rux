@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "Rux/Platform/Defines.h"
 #include "Rux/Rcu.h"
 
 #include <filesystem>
@@ -42,9 +43,9 @@ namespace Rux {
         bool isDll = false;
 
         void Error(std::string msg);
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__NetBSD__) || defined(__illumos__) || (defined(__sun) && defined(__SVR4))
+#if RUX_IS_ELF_OS
         [[nodiscard]] bool LinkElf64(const std::filesystem::path& outputPath);
-#elif defined(__APPLE__)
+#elif RUX_OS_MACOS
         [[nodiscard]] bool LinkMachO64(const std::filesystem::path& outputPath);
 #endif
     };
