@@ -9,6 +9,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <span>
 
 namespace Rux {
 
