@@ -588,9 +588,9 @@ namespace Rux {
         if (!name.has_extension()) {
             fs::path ext;
 
-            if constexpr (HostOS == OS::Windows)
+            if constexpr (IsWindows())
                 ext = ".dll";
-            else if constexpr (HostOS == OS::MacOS)
+            else if constexpr (IsMacOS())
                 ext = ".dylib";
             else
                 ext = ".so";
@@ -628,12 +628,8 @@ namespace Rux {
         errors.push_back({std::move(msg)});
     }
 
-    bool Linker::Link(const std::filesystem::path& outputPath) {
-#if RUX_IS_ELF_OS
-        return LinkElf64(outputPath);
-#elif RUX_OS_MACOS
-        return LinkMachO64(outputPath);
-#else
+
+    [[nodiscard]] bool LinkPe64(const fs::path& outputPath) {
         // 1. Collect imported external function names
 
         // EXEs always need ExitProcess for the entry thunk; DLLs do not.
@@ -1725,7 +1721,7 @@ namespace Rux {
         return it->second;
     }
 
-    bool Linker::LinkElf64(const fs::path& outputPath) {
+    bool LinkElf64(const fs::path& outputPath) {
         static constexpr uint64_t kBase = 0x400000;
         static constexpr uint64_t kPage = 0x1000;
         static constexpr uint32_t kPfX = 0x1;
@@ -2084,7 +2080,6 @@ namespace Rux {
     }
 #endif
 
-#if RUX_OS_MACOS
     // macOS x86-64 syscalls use the BSD class mask (0x2000000 | <unix number>),
     // the System V AMD64 argument registers (rdi/rsi/rdx/r10/r8/r9), and the
     // `syscall` instruction. Rux extern calls arrive in the Win64 layout
@@ -2231,7 +2226,7 @@ namespace Rux {
     // goes through raw syscalls in the compat thunks (same model as LinkElf64).
     // The result is ad-hoc code-signed because Apple Silicon refuses to run any
     // unsigned binary (including x86-64 ones translated by Rosetta 2).
-    bool Linker::LinkMachO64(const fs::path& outputPath) {
+    bool LinkMachO64(const fs::path& outputPath) {
         static constexpr uint64_t kBase = 0x100000000ULL; // __TEXT base (after 4 GiB __PAGEZERO)
         static constexpr uint64_t kPage = 0x1000;
 
@@ -2633,5 +2628,18 @@ namespace Rux {
 
         return true;
     }
-#endif
+
+    bool Linker::Link(const std::filesystem::path& outputPath) {
+        using namespace Platform;
+
+        if constexpr (IsMacOS()) {
+            return LinkMachO64(outputPath);
+        }
+        else if constexpr (IsUnixLike()) {
+            return LinkElf64(outputPath);
+        }
+        else {
+            return LinkPe64(outputPath);
+        }
+    }
 } // namespace Rux

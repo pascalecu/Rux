@@ -43,10 +43,5 @@ namespace Rux {
         bool isDll = false;
 
         void Error(std::string msg);
-#if RUX_IS_ELF_OS
-        [[nodiscard]] bool LinkElf64(const std::filesystem::path& outputPath);
-#elif RUX_OS_MACOS
-        [[nodiscard]] bool LinkMachO64(const std::filesystem::path& outputPath);
-#endif
     };
 } // namespace Rux
