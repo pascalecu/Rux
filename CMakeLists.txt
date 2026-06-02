@@ -43,6 +43,13 @@ add_executable(rux
         Source/Asm.cpp
         Source/Rcu.cpp
         Source/Linker.cpp
+        Source/Linker/BinaryReader.cpp
+        Source/Linker/BinaryWriter.cpp
+        Source/Linker/ElfLinker.cpp
+        Source/Linker/MachOLinker.cpp
+        Source/Linker/PeImage.cpp
+        Source/Linker/PeLinker.cpp
+        Source/Linker/SharedLibrary.cpp
         Include/Rux/Platform/ABI.h
         Include/Rux/Platform/Defines.h
         Include/Rux/Platform/Host.h
@@ -63,6 +70,14 @@ add_executable(rux
         Include/Rux/Lir.h
         Include/Rux/Asm.h
         Include/Rux/Rcu.h
+        Include/Rux/Linker/BinaryReader.h
+        Include/Rux/Linker/BinaryWriter.h
+        Include/Rux/Linker/ElfLinker.h
+        Include/Rux/Linker/MachOLinker.h
+        Include/Rux/Linker/PeImage.h
+        Include/Rux/Linker/PeLinker.h
+        Include/Rux/Linker/SharedLibrary.h
+        Include/Rux/Linker/Utils.h
         Include/Rux/Linker.h
 )
 
