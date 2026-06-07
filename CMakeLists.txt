@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.31)
 project(Rux VERSION 0.3.0 LANGUAGES CXX)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(ProjectOptions)
 
 string(TIMESTAMP RUX_BUILD_TIMESTAMP "%Y-%m-%dT%H:%M:%SZ" UTC)
 
@@ -57,6 +58,14 @@ target_include_directories(rux PRIVATE
 if (WIN32)
     target_link_libraries(rux PRIVATE Psapi Winhttp)
 endif ()
+
+target_compile_definitions(rux PRIVATE
+        $<$<CONFIG:Debug>:RUX_BUILD_DEBUG=1>
+        $<$<NOT:$<CONFIG:Debug>>:RUX_BUILD_DEBUG=0>
+
+        $<$<CONFIG:Debug>:RUX_BUILD_RELEASE=0>
+        $<$<NOT:$<CONFIG:Debug>>:RUX_BUILD_RELEASE=1>
+)
 
 set_property(TARGET rux
         PROPERTY MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Release>,MultiThreaded,MultiThreadedDebugDLL>"

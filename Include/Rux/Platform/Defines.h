@@ -123,12 +123,12 @@
 #define RUX_CXX_20 (RUX_CPLUSPLUS >= 202002L)
 #define RUX_CXX_23 (RUX_CPLUSPLUS >= 202302L)
 
-#ifdef NDEBUG
-#  define RUX_BUILD_RELEASE 1
+#ifndef RUX_BUILD_DEBUG
 #  define RUX_BUILD_DEBUG 0
-#else
+#endif
+
+#ifndef RUX_BUILD_RELEASE
 #  define RUX_BUILD_RELEASE 0
-#  define RUX_BUILD_DEBUG 1
 #endif
 
 #if defined(__SSE2__) || defined(_M_X64)
