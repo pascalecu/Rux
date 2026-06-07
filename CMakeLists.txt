@@ -3,6 +3,7 @@ project(Rux VERSION 0.3.0 LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(ProjectOptions)
+include(Version)
 
 string(TIMESTAMP RUX_BUILD_TIMESTAMP "%Y-%m-%dT%H:%M:%SZ" UTC)
 
