@@ -14,3 +14,79 @@ Checks: '*,
 -zircon-*,
 -portability-*,
 portability-simd-intrinsics'
+
+CheckOptions:
+  - key: readability-identifier-naming.DefaultCase
+    value: lowerCamelCase
+
+  - key: readability-identifier-naming.DefaultIgnoredRegexp
+    value: "^(k[A-Z].*|__.*)$"
+
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.UnionCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.FunctionCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.MethodCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.VirtualMethodCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.ClassMethodCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.VariableCase
+    value: lowerCamelCase
+
+  - key: readability-identifier-naming.MemberCase
+    value: lowerCamelCase
+
+  - key: readability-identifier-naming.LocalVariableCase
+    value: lowerCamelCase
+
+  - key: readability-identifier-naming.GlobalVariableCase
+    value: lowerCamelCase
+
+  - key: readability-identifier-naming.ConstantCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.GlobalConstantPrefix
+    value: "k"
+
+  - key: readability-identifier-naming.ClassConstantCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.ClassConstantPrefix
+    value: "k"
+
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.EnumConstantCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.ScopedEnumConstantCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.ParameterCase
+    value: lowerCamelCase
+
+  - key: readability-identifier-naming.PointerParameterCase
+    value: lowerCamelCase
+
+  - key: readability-identifier-naming.NamespaceCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.InlineNamespaceCase
+    value: CamelCase
