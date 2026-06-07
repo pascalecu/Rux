@@ -3045,7 +3045,7 @@ namespace Rux {
     }
 
     void Cli::PrintVersion() {
-        std::print("Rux {} ({} {})\n", RUX_VERSION, RUX_BUILD_DATE, RUX_BUILD_TIME);
+        std::print("Rux {} ({})\n", RUX_VERSION, RUX_BUILD_TIMESTAMP);
     }
 
     void Cli::PrintUnknownCommand(std::string_view command) {
