@@ -174,6 +174,35 @@ function(rux_make_date_auto format value out)
     endif ()
 endfunction()
 
+function(rux_version_parse version out)
+    string(REPLACE "." ";" _parts "${version}")
+
+    set(_major 0)
+    set(_minor 0)
+    set(_patch 0)
+
+    list(LENGTH _parts _count)
+
+    list(GET _parts 0 _major)
+
+    if (_count GREATER 1)
+        list(GET _parts 1 _minor)
+    endif ()
+
+    if (_count GREATER 2)
+        list(GET _parts 2 _patch)
+    endif ()
+
+    rux_version_number(
+            ${_major}
+            ${_minor}
+            ${_patch}
+            ${out}
+    )
+
+    set(${out} ${${out}} PARENT_SCOPE)
+endfunction()
+
 # Constants
 rux_version_number(0 0 0 RUX_VERSION_ZERO)
 rux_version_number(0 0 1 RUX_VERSION_MIN)
