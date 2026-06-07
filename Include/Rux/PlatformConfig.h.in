@@ -1,0 +1,21 @@
+#pragma once
+
+#cmakedefine01 RUX_OS_WINDOWS
+#cmakedefine01 RUX_OS_MACOS
+#cmakedefine01 RUX_OS_LINUX
+#cmakedefine01 RUX_OS_FREEBSD
+#cmakedefine01 RUX_OS_OPENBSD
+#cmakedefine01 RUX_OS_NETBSD
+#cmakedefine01 RUX_OS_DRAGONFLYBSD
+#cmakedefine01 RUX_OS_SOLARIS
+#cmakedefine01 RUX_OS_ILLUMOS
+
+#cmakedefine01 RUX_FAMILY_WINDOWS
+#cmakedefine01 RUX_FAMILY_UNIX
+#cmakedefine01 RUX_FAMILY_BSD
+#cmakedefine01 RUX_FAMILY_SUNOS
+#cmakedefine01 RUX_FAMILY_POSIX
+
+#cmakedefine01 RUX_OBJECT_ELF
+#cmakedefine01 RUX_OBJECT_MACHO
+#cmakedefine01 RUX_OBJECT_PE

@@ -5,6 +5,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(ProjectOptions)
 include(Version)
 include(Language)
+include(PlatformDetect)
 
 string(TIMESTAMP RUX_BUILD_TIMESTAMP "%Y-%m-%dT%H:%M:%SZ" UTC)
 
@@ -23,6 +24,12 @@ endif ()
 configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/Include/Rux/Version.h.in
         ${CMAKE_CURRENT_BINARY_DIR}/generated/Rux/Version.h
+        @ONLY
+)
+
+configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/Include/Rux/PlatformConfig.h.in
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/Rux/PlatformConfig.h
         @ONLY
 )
 
@@ -68,7 +75,7 @@ target_compile_definitions(rux PRIVATE
 
 foreach (std IN ITEMS 98 11 14 17 20 23 26)
     target_compile_definitions(rux PRIVATE
-            RUX_CXX_AT_LEAST_${std}=${RUX_LANG_STDCPP_AT_LEAST_${std}}
+            RUX_CXX_AT_LEAST_${std}=${RUX_CXX_AT_LEAST_${std}}
     )
 endforeach ()
 
