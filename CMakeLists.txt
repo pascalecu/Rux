@@ -7,6 +7,7 @@ include(Version)
 include(Language)
 include(PlatformDetect)
 include(CompilerDetect)
+include(Architecture)
 
 string(TIMESTAMP RUX_BUILD_TIMESTAMP "%Y-%m-%dT%H:%M:%SZ" UTC)
 

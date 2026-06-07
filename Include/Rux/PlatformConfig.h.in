@@ -19,3 +19,27 @@
 #cmakedefine01 RUX_OBJECT_ELF
 #cmakedefine01 RUX_OBJECT_MACHO
 #cmakedefine01 RUX_OBJECT_PE
+
+#cmakedefine01 RUX_ARCH_FAMILY_X86
+#cmakedefine01 RUX_ARCH_FAMILY_ARM
+#cmakedefine01 RUX_ARCH_FAMILY_RISCV
+
+#cmakedefine01 RUX_ARCH_X86
+#cmakedefine01 RUX_ARCH_X86_64
+
+#cmakedefine01 RUX_ARCH_ARM
+#cmakedefine01 RUX_ARCH_AARCH64
+
+#cmakedefine01 RUX_ARCH_RISCV32
+#cmakedefine01 RUX_ARCH_RISCV64
+
+#cmakedefine01 RUX_ARCH_32BIT
+#cmakedefine01 RUX_ARCH_64BIT
+
+#cmakedefine01 RUX_ARCH_LITTLE_ENDIAN
+#cmakedefine01 RUX_ARCH_BIG_ENDIAN
+
+#define RUX_ARCH_NAME "@RUX_ARCH_NAME@"
+#define RUX_ARCH_FAMILY_NAME "@RUX_ARCH_FAMILY_NAME@"
+#define RUX_ARCH_BITS @RUX_ARCH_BITS@
+#define RUX_ARCH_ENDIAN "@RUX_ARCH_ENDIAN@"
