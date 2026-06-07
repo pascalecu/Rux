@@ -23,8 +23,12 @@ namespace Rux::Platform {
 
         // x86_32
         if (arch == Arch::X86_32) {
-            if (os == OS::Windows) return {ABI::WindowsX86, CallingConv::StdCall, false, 4};
-            if (os == OS::Linux) return {ABI::SystemV, CallingConv::C, false, 4};
+            if (os == OS::Windows) {
+                return {ABI::WindowsX86, CallingConv::StdCall, false, 4};
+            }
+            if (os == OS::Linux) {
+                return {ABI::SystemV, CallingConv::C, false, 4};
+            }
         }
 
         // ARM
@@ -36,8 +40,12 @@ namespace Rux::Platform {
         }
 
         // RISC-V
-        if (arch == Arch::RISCV64) return {ABI::RISCV_LP64, CallingConv::RISCV, false, 16};
-        if (arch == Arch::RISCV32) return {ABI::RISCV_ILP32, CallingConv::RISCV, false, 16};
+        if (arch == Arch::RISCV64) {
+            return {ABI::RISCV_LP64, CallingConv::RISCV, false, 16};
+        }
+        if (arch == Arch::RISCV32) {
+            return {ABI::RISCV_ILP32, CallingConv::RISCV, false, 16};
+        }
 
         return {ABI::Unknown, CallingConv::Default, false, 0};
     }

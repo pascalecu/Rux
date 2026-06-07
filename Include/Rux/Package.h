@@ -8,10 +8,10 @@ namespace Rux {
      * @brief Defines the architectural nature of a Rux package.
      */
     enum class PackageType {
-        Executable, ///< Standard binary output (e.g., CLI tools, applications).
+        Executable,    ///< Standard binary output (e.g., CLI tools, applications).
         SharedLibrary, ///< Dynamically linked library (.so/.dll/.dylib).
         StaticLibrary, ///< Statically linked library archive (.a/.lib).
-        Source ///< Source-only package.
+        Source         ///< Source-only package.
     };
 
     /**

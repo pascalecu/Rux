@@ -17,10 +17,10 @@ namespace Rux {
     // Opcodes
     enum class LirOpcode {
         // Literals / memory
-        Const, // %dst = const <type> <value>
+        Const,  // %dst = const <type> <value>
         Alloca, // %dst = alloca <type>
-        Load, // %dst = load <type> %ptr  |  %dst = load <type> <name>
-        Store, // store <type> %val, %ptr
+        Load,   // %dst = load <type> %ptr  |  %dst = load <type> <name>
+        Store,  // store <type> %val, %ptr
         // Arithmetic
         Add,
         Sub,
@@ -48,7 +48,7 @@ namespace Rux {
         // Type operations
         Cast, // %dst = cast %src : <from> to <to>
         // Calls
-        Call, // %dst = call <type> @<name>(%args...)
+        Call,         // %dst = call <type> @<name>(%args...)
         CallIndirect, // %dst = call_ind <type> %callee(%args...)
         // Aggregate access (return pointer)
         FieldPtr, // %dst = fieldptr *<type> %base, <field>
@@ -62,11 +62,11 @@ namespace Rux {
     // LIR Instruction
     struct LirInstr {
         LirReg dst = LirNoReg; // result register (LirNoReg for Store)
-        TypeRef type; // result type (or value type for Store)
+        TypeRef type;          // result type (or value type for Store)
         LirOpcode op = LirOpcode::Const;
         std::vector<LirReg> srcs; // source registers
-        std::string strArg; // literal (Const), name (Load/Call), field (FieldPtr), from-type (Cast)
-        std::vector<std::pair<LirReg, std::uint32_t>> phiPreds; // Phi: (reg, block_index)
+        std::string strArg;       // literal (Const), name (Load/Call), field (FieldPtr), from-type (Cast)
+        std::vector<std::pair<LirReg, std::uint32_t>> phiPreds;  // Phi: (reg, block_index)
         CallingConvention callConv = CallingConvention::Default; // for Call instructions
     };
 
@@ -81,7 +81,7 @@ namespace Rux {
     struct LirTerminator {
         LirTermKind kind = LirTermKind::Jump;
         LirReg cond = LirNoReg;
-        std::uint32_t trueTarget = 0; // Jump / Branch true target
+        std::uint32_t trueTarget = 0;  // Jump / Branch true target
         std::uint32_t falseTarget = 0; // Branch false target
         std::optional<LirReg> retVal;
         TypeRef retType;
@@ -174,7 +174,7 @@ namespace Rux {
 
     // Vtable — a sequence of function-pointer entries emitted in .rodata
     struct LirVtable {
-        std::string label; // e.g. __vtable__int64__Display
+        std::string label;                // e.g. __vtable__int64__Display
         std::vector<std::string> methods; // mangled method names in vtable order
     };
 

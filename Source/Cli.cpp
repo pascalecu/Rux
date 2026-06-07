@@ -93,24 +93,34 @@ namespace Rux {
         }
 
         [[nodiscard]] std::size_t CountLines(std::string_view source) {
-            if (source.empty()) return 0;
+            if (source.empty()) {
+                return 0;
+            }
 
             std::size_t lines = 0;
-            for (const char ch : source)
-                if (ch == '\n') ++lines;
-            if (source.back() != '\n') ++lines;
+            for (const char ch : source) {
+                if (ch == '\n') {
+                    ++lines;
+                }
+            }
+            if (source.back() != '\n') {
+                ++lines;
+            }
             return lines;
         }
 
         [[nodiscard]] std::size_t CountTokens(const LexerResult& result) {
-            if (result.tokens.empty()) return 0;
+            if (result.tokens.empty()) {
+                return 0;
+            }
             return result.tokens.back().IsEof() ? result.tokens.size() - 1 : result.tokens.size();
         }
 
         [[nodiscard]] std::string FormatNumber(std::uintmax_t value) {
             std::string digits = std::to_string(value);
-            for (std::ptrdiff_t i = static_cast<std::ptrdiff_t>(digits.size()) - 3; i > 0; i -= 3)
+            for (std::ptrdiff_t i = static_cast<std::ptrdiff_t>(digits.size()) - 3; i > 0; i -= 3) {
                 digits.insert(static_cast<std::size_t>(i), 1, ',');
+            }
             return digits;
         }
 
@@ -119,31 +129,46 @@ namespace Rux {
             oss << std::fixed << std::setprecision(decimals) << value;
             std::string text = oss.str();
             auto dot = text.find('.');
-            if (dot == std::string::npos) return text;
+            if (dot == std::string::npos) {
+                return text;
+            }
 
-            while (!text.empty() && text.back() == '0')
+            while (!text.empty() && text.back() == '0') {
                 text.pop_back();
-            if (!text.empty() && text.back() == '.') text.pop_back();
+            }
+            if (!text.empty() && text.back() == '.') {
+                text.pop_back();
+            }
             return text;
         }
 
         [[nodiscard]] std::string FormatCompactNumber(double value) {
             const double absValue = std::fabs(value);
-            if (absValue >= 1'000'000.0) return FormatDecimal(value / 1'000'000.0, 1) + "M";
-            if (absValue >= 1'000.0) return FormatDecimal(value / 1'000.0, 1) + "K";
+            if (absValue >= 1'000'000.0) {
+                return FormatDecimal(value / 1'000'000.0, 1) + "M";
+            }
+            if (absValue >= 1'000.0) {
+                return FormatDecimal(value / 1'000.0, 1) + "K";
+            }
             return FormatNumber(static_cast<std::uintmax_t>(std::llround(value)));
         }
 
         [[nodiscard]] std::string FormatTokenThroughput(double tokensPerSecond) {
             const double absValue = std::fabs(tokensPerSecond);
-            if (absValue >= 1'000'000.0) return FormatDecimal(tokensPerSecond / 1'000'000.0, 1) + " M tok/s";
-            if (absValue >= 1'000.0) return FormatDecimal(tokensPerSecond / 1'000.0, 1) + " K tok/s";
+            if (absValue >= 1'000'000.0) {
+                return FormatDecimal(tokensPerSecond / 1'000'000.0, 1) + " M tok/s";
+            }
+            if (absValue >= 1'000.0) {
+                return FormatDecimal(tokensPerSecond / 1'000.0, 1) + " K tok/s";
+            }
             return FormatNumber(static_cast<std::uintmax_t>(std::llround(tokensPerSecond))) + " tok/s";
         }
 
         [[nodiscard]] std::string FormatSize(std::uintmax_t bytes) {
             const double kb = static_cast<double>(bytes) / 1024.0;
-            if (kb < 1024.0) return FormatNumber(static_cast<std::uintmax_t>(std::llround(kb))) + " KB";
+            if (kb < 1024.0) {
+                return FormatNumber(static_cast<std::uintmax_t>(std::llround(kb))) + " KB";
+            }
 
             const double mb = kb / 1024.0;
             return FormatDecimal(mb, 2) + " MB";
@@ -187,26 +212,41 @@ namespace Rux {
 
             const auto os_prefix = target.substr(0, dash_pos);
 
-            if (os_prefix == "linux") return "Linux";
-            if (os_prefix == "windows") return "Windows";
-            if (os_prefix == "macos") return "macOS";
-            if (os_prefix == "freebsd" || os_prefix == "openbsd" || os_prefix == "netbsd" || os_prefix == "dragonfly")
+            if (os_prefix == "linux") {
+                return "Linux";
+            }
+            if (os_prefix == "windows") {
+                return "Windows";
+            }
+            if (os_prefix == "macos") {
+                return "macOS";
+            }
+            if (os_prefix == "freebsd" || os_prefix == "openbsd" || os_prefix == "netbsd" || os_prefix == "dragonfly") {
                 return "BSD";
-            if (os_prefix == "illumos") return "Illumos";
+            }
+            if (os_prefix == "illumos") {
+                return "Illumos";
+            }
 
             return "";
         }
 
         [[nodiscard]] bool DeclMatchesTarget(const Decl& decl, const std::string_view target) {
-            if (decl.targetOs.empty()) return true;
+            if (decl.targetOs.empty()) {
+                return true;
+            }
             const std::string_view targetOs = TargetOsName(target);
             // Normalize both sides for robust comparison.
-            if (decl.targetOs.size() != targetOs.size()) return false;
+            if (decl.targetOs.size() != targetOs.size()) {
+                return false;
+            }
             // Case-insensitive comparison handles any casing in @[Target("...")].
-            for (std::size_t i = 0; i < decl.targetOs.size(); ++i)
+            for (std::size_t i = 0; i < decl.targetOs.size(); ++i) {
                 if (std::tolower(static_cast<unsigned char>(decl.targetOs[i])) !=
-                    std::tolower(static_cast<unsigned char>(targetOs[i])))
+                    std::tolower(static_cast<unsigned char>(targetOs[i]))) {
                     return false;
+                }
+            }
             return true;
         }
 
@@ -233,8 +273,9 @@ namespace Rux {
 
         void PruneDeclsForTarget(std::vector<DeclPtr>& decls, const std::string_view target) {
             std::erase_if(decls, [&](const DeclPtr& decl) { return !decl || !DeclMatchesTarget(*decl, target); });
-            for (const auto& decl : decls)
+            for (const auto& decl : decls) {
                 PruneDeclForTarget(*decl, target);
+            }
         }
 
         void PruneModuleForTarget(Module& module, const std::string_view target) {
@@ -366,8 +407,9 @@ namespace Rux {
         // Collect all arguments as string_views (skip argv[0])
         std::vector<std::string_view> sv;
         sv.reserve(static_cast<std::size_t>(args.size()));
-        for (auto* a : args.subspan(1))
+        for (auto* a : args.subspan(1)) {
             sv.emplace_back(a);
+        }
 
         if (sv.empty()) {
             PrintHelp();
@@ -399,7 +441,9 @@ namespace Rux {
                 }
                 if (arg == "--color") {
                     preCommandGlobals.push_back(arg);
-                    if (i + 1 < sv.size()) preCommandGlobals.push_back(sv[++i]);
+                    if (i + 1 < sv.size()) {
+                        preCommandGlobals.push_back(sv[++i]);
+                    }
                     continue;
                 }
                 if (arg.starts_with("--color=")) {
@@ -427,24 +471,60 @@ namespace Rux {
         GlobalOptions opts = ParseGlobalOptions(allArgs);
         std::span<const std::string_view> rest(cmdArgs);
 
-        if (command == "help") return RunHelp(rest, opts);
-        if (command == "version") return RunVersion(opts);
-        if (command == "build") return RunBuild(rest, opts);
-        if (command == "clean") return RunClean(rest, opts);
-        if (command == "doc") return RunDoc(rest, opts);
-        if (command == "fmt") return RunFmt(rest, opts);
-        if (command == "init") return RunInit(rest, opts);
-        if (command == "install") return RunInstall(rest, opts);
-        if (command == "uninstall") return RunUninstall(rest, opts);
-        if (command == "list") return RunList(rest, opts);
-        if (command == "new") return RunNew(rest, opts);
-        if (command == "add") return RunAdd(rest, opts);
-        if (command == "remove") return RunRemove(rest, opts);
-        if (command == "run") return RunRun(rest, opts);
-        if (command == "test") return RunTest(rest, opts);
-        if (command == "update") return RunUpdate(rest, opts);
-        if (command == "info") return RunInfo(rest, opts);
-        if (command == "check") return RunCheck(rest, opts);
+        if (command == "help") {
+            return RunHelp(rest, opts);
+        }
+        if (command == "version") {
+            return RunVersion(opts);
+        }
+        if (command == "build") {
+            return RunBuild(rest, opts);
+        }
+        if (command == "clean") {
+            return RunClean(rest, opts);
+        }
+        if (command == "doc") {
+            return RunDoc(rest, opts);
+        }
+        if (command == "fmt") {
+            return RunFmt(rest, opts);
+        }
+        if (command == "init") {
+            return RunInit(rest, opts);
+        }
+        if (command == "install") {
+            return RunInstall(rest, opts);
+        }
+        if (command == "uninstall") {
+            return RunUninstall(rest, opts);
+        }
+        if (command == "list") {
+            return RunList(rest, opts);
+        }
+        if (command == "new") {
+            return RunNew(rest, opts);
+        }
+        if (command == "add") {
+            return RunAdd(rest, opts);
+        }
+        if (command == "remove") {
+            return RunRemove(rest, opts);
+        }
+        if (command == "run") {
+            return RunRun(rest, opts);
+        }
+        if (command == "test") {
+            return RunTest(rest, opts);
+        }
+        if (command == "update") {
+            return RunUpdate(rest, opts);
+        }
+        if (command == "info") {
+            return RunInfo(rest, opts);
+        }
+        if (command == "check") {
+            return RunCheck(rest, opts);
+        }
 
         PrintUnknownCommand(command);
         return 1;
@@ -464,22 +544,28 @@ namespace Rux {
             }
             if (arg == "--color") {
                 if (i + 1 < args.size()) {
-                    if (const std::string_view val = args[++i]; val == "on")
+                    if (const std::string_view val = args[++i]; val == "on") {
                         opts.color = ColorMode::On;
-                    else if (val == "off")
+                    }
+                    else if (val == "off") {
                         opts.color = ColorMode::Off;
-                    else
+                    }
+                    else {
                         opts.color = ColorMode::Auto;
+                    }
                 }
                 continue;
             }
             if (arg.starts_with("--color=")) {
-                if (const std::string_view val = arg.substr(8); val == "on")
+                if (const std::string_view val = arg.substr(8); val == "on") {
                     opts.color = ColorMode::On;
-                else if (val == "off")
+                }
+                else if (val == "off") {
                     opts.color = ColorMode::Off;
-                else
+                }
+                else {
                     opts.color = ColorMode::Auto;
+                }
             }
         }
         return opts;
@@ -497,7 +583,9 @@ namespace Rux {
 
     static std::optional<Manifest> LoadManifest(const std::filesystem::path& path) {
         auto m = Manifest::Load(path);
-        if (!m) std::print(stderr, "error: failed to parse '{}'\n", path.string());
+        if (!m) {
+            std::print(stderr, "error: failed to parse '{}'\n", path.string());
+        }
         return m;
     }
 
@@ -505,7 +593,9 @@ namespace Rux {
     ResolveBuildOutputDir(const std::filesystem::path& root, const Manifest& manifest, std::string_view profileName) {
         std::filesystem::path output =
             manifest.build.output.empty() ? std::filesystem::path("Bin") : std::filesystem::path(manifest.build.output);
-        if (output.is_relative()) output = root / output;
+        if (output.is_relative()) {
+            output = root / output;
+        }
         return (output / std::string(profileName)).lexically_normal();
     }
 
@@ -514,10 +604,12 @@ namespace Rux {
     // Commands
 
     int Cli::RunHelp(std::span<const std::string_view> args, const GlobalOptions&) {
-        if (!args.empty())
+        if (!args.empty()) {
             PrintHelpFor(args.front());
-        else
+        }
+        else {
             PrintHelp();
+        }
         return 0;
     }
 
@@ -550,8 +642,12 @@ namespace Rux {
                 isDebug = true;
                 continue;
             }
-            if (arg == "-q" || arg == "--quiet") continue;
-            if (arg == "-v" || arg == "--verbose") continue;
+            if (arg == "-q" || arg == "--quiet") {
+                continue;
+            }
+            if (arg == "-v" || arg == "--verbose") {
+                continue;
+            }
             if (arg == "--stats") {
                 showStats = true;
                 continue;
@@ -603,10 +699,14 @@ namespace Rux {
         (void)isDebug; // Stop -Wunused-but-set-variable
 
         auto manifestPath = RequireManifest();
-        if (!manifestPath) return 1;
+        if (!manifestPath) {
+            return 1;
+        }
 
         auto manifest = LoadManifest(*manifestPath);
-        if (!manifest) return 1;
+        if (!manifest) {
+            return 1;
+        }
 
         std::string targetName = target.empty() ? HostTargetTriple() : std::string(target);
         if (!IsSupportedTargetTriple(targetName)) {
@@ -628,19 +728,24 @@ namespace Rux {
         }
 
         std::string_view profileName = isRelease ? "Release" : "Debug";
-        if (!profile.empty()) profileName = profile;
+        if (!profile.empty()) {
+            profileName = profile;
+        }
 
-        if (!opts.quiet && !showStats)
+        if (!opts.quiet && !showStats) {
             std::print("Compiling {} v{} [{}]\n",
                        manifest->package.name,
                        manifest->package.version,
                        manifestPath->parent_path().string());
+        }
 
         // ── Lex ───────────────────────────────────────────────────────────────
 
         BuildStats stats;
         auto loadResult = SourceLoader::Load(manifestPath->parent_path());
-        if (!loadResult) return 1;
+        if (!loadResult) {
+            return 1;
+        }
 
         stats.localFiles = loadResult->files.size();
         for (const auto& file : loadResult->files) {
@@ -648,15 +753,18 @@ namespace Rux {
             stats.localSourceSize += file.source.size();
         }
 
-        for (const auto& err : loadResult->errors)
+        for (const auto& err : loadResult->errors) {
             std::print(stderr, "{}", err);
+        }
 
         bool lexErrors = false;
         std::vector<LexerResult> lexResults;
         lexResults.reserve(loadResult->files.size());
         const auto localLexingStart = std::chrono::steady_clock::now();
         for (const auto& file : loadResult->files) {
-            if (opts.verbose) std::print("     Lexing {}\n", file.path.string());
+            if (opts.verbose) {
+                std::print("     Lexing {}\n", file.path.string());
+            }
 
             Lexer lexer(file.source, file.path.string());
             auto lexResult = lexer.Tokenize();
@@ -667,7 +775,9 @@ namespace Rux {
                 const char* sev = diag.severity == LexerDiagnostic::Severity::Error ? "error" : "warning";
                 std::print(stderr, "{}:{}:{}: {}: {}\n", file.path.string(), loc.line, loc.column, sev, diag.message);
             }
-            if (lexResult.HasErrors()) lexErrors = true;
+            if (lexResult.HasErrors()) {
+                lexErrors = true;
+            }
 
             if (dumpTokens) {
                 auto tempDir = manifestPath->parent_path() / "Temp" / "Tokens";
@@ -681,7 +791,9 @@ namespace Rux {
         }
         const auto localLexingEnd = std::chrono::steady_clock::now();
         stats.lexing += ElapsedMs(localLexingStart, localLexingEnd);
-        if (lexErrors) return 1;
+        if (lexErrors) {
+            return 1;
+        }
 
         // Parse
 
@@ -692,10 +804,14 @@ namespace Rux {
         const auto localParsingStart = std::chrono::steady_clock::now();
         for (std::size_t fileIndex = 0; fileIndex < loadResult->files.size(); ++fileIndex) {
             const auto& file = loadResult->files[fileIndex];
-            if (opts.verbose) std::print("    Parsing {}\n", file.path.string());
+            if (opts.verbose) {
+                std::print("    Parsing {}\n", file.path.string());
+            }
 
             auto& lexResult = lexResults[fileIndex];
-            if (lexResult.HasErrors()) continue;
+            if (lexResult.HasErrors()) {
+                continue;
+            }
 
             Parser parser(std::move(lexResult.tokens), file.path.string());
             auto parseResult = parser.Parse();
@@ -721,12 +837,14 @@ namespace Rux {
             parseResults.push_back(std::move(parseResult));
         }
         stats.parsing += ElapsedMs(localParsingStart);
-        if (parseErrors) return 1;
+        if (parseErrors) {
+            return 1;
+        }
 
         // Load dependency packages referenced by import declarations
 
         std::vector<ParseResult> depParseResults;
-        std::vector<std::string> loadedPackages; // parallel: package name per entry
+        std::vector<std::string> loadedPackages;    // parallel: package name per entry
         std::vector<std::string> loadedModuleNames; // parallel: source name per entry
         {
             struct PendingPackage {
@@ -741,17 +859,20 @@ namespace Rux {
             auto enqueueDependency = [&](const std::string& pkgName,
                                          const Manifest& ownerManifest,
                                          const std::filesystem::path& ownerRoot) -> bool {
-                if (queuedPackageNames.count(pkgName)) return true;
+                if (queuedPackageNames.count(pkgName)) {
+                    return true;
+                }
 
                 // Resolve imports through the target view of the owning
                 // manifest. This is what maps Platform to Linux on linux-x64.
                 const auto deps = ownerManifest.EffectiveDependencies(targetName);
                 const Dependency* dep = nullptr;
-                for (const auto& d : deps)
+                for (const auto& d : deps) {
                     if (d.name == pkgName) {
                         dep = &d;
                         break;
                     }
+                }
 
                 if (!dep) {
                     std::print(stderr, "error: package '{}' is not listed in [Dependencies]\n", pkgName);
@@ -787,24 +908,37 @@ namespace Rux {
             std::vector<std::string> imports;
             auto collectImports = [&](this auto&& self, const Decl& decl) -> void {
                 if (const auto* ud = dynamic_cast<const UseDecl*>(&decl)) {
-                    if (!DeclMatchesTarget(*ud, targetName)) return;
-                    if (!ud->path.empty()) imports.push_back(ud->path[0]);
+                    if (!DeclMatchesTarget(*ud, targetName)) {
+                        return;
+                    }
+                    if (!ud->path.empty()) {
+                        imports.push_back(ud->path[0]);
+                    }
                     return;
                 }
                 if (const auto* mod = dynamic_cast<const ModuleDecl*>(&decl)) {
-                    for (const auto& item : mod->items)
-                        if (item) self(*item);
+                    for (const auto& item : mod->items) {
+                        if (item) {
+                            self(*item);
+                        }
+                    }
                 }
             };
 
             for (const auto& pr : parseResults) {
                 imports.clear();
                 for (const auto& decl : pr.module.items) {
-                    if (decl) collectImports(*decl);
+                    if (decl) {
+                        collectImports(*decl);
+                    }
                 }
                 for (const auto& pkgName : imports) {
-                    if (pkgName == manifest->package.name) continue;
-                    if (!enqueueDependency(pkgName, *manifest, manifestPath->parent_path())) return 1;
+                    if (pkgName == manifest->package.name) {
+                        continue;
+                    }
+                    if (!enqueueDependency(pkgName, *manifest, manifestPath->parent_path())) {
+                        return 1;
+                    }
                 }
             }
 
@@ -813,7 +947,9 @@ namespace Rux {
                 const Manifest pendingManifest = pendingPackages[pendingIndex].manifest;
                 const std::string packageName = pendingPackages[pendingIndex].name;
 
-                if (opts.verbose) std::print("  Loading package {} from {}\n", packageName, pendingRoot.string());
+                if (opts.verbose) {
+                    std::print("  Loading package {} from {}\n", packageName, pendingRoot.string());
+                }
 
                 auto depLoadResult = SourceLoader::Load(pendingRoot);
                 if (!depLoadResult) {
@@ -825,9 +961,12 @@ namespace Rux {
                     stats.dependencySourceSize += depFile.source.size();
                 }
 
-                for (const auto& error : depLoadResult->errors)
+                for (const auto& error : depLoadResult->errors) {
                     std::print(stderr, "{}", error);
-                if (!depLoadResult->errors.empty()) return 1;
+                }
+                if (!depLoadResult->errors.empty()) {
+                    return 1;
+                }
 
                 std::vector<ParseResult> packageParseResults;
                 packageParseResults.reserve(depLoadResult->files.size());
@@ -849,7 +988,9 @@ namespace Rux {
                                    sev,
                                    diag.message);
                     }
-                    if (depLex.HasErrors()) return 1;
+                    if (depLex.HasErrors()) {
+                        return 1;
+                    }
 
                     const auto depParsingStart = std::chrono::steady_clock::now();
                     Parser depParser(std::move(depLex.tokens), depFile.path.string());
@@ -865,7 +1006,9 @@ namespace Rux {
                                    sev,
                                    diag.message);
                     }
-                    if (depParse.HasErrors()) return 1;
+                    if (depParse.HasErrors()) {
+                        return 1;
+                    }
                     PruneModuleForTarget(depParse.module, targetName);
 
                     packageParseResults.push_back(std::move(depParse));
@@ -874,12 +1017,18 @@ namespace Rux {
                 imports.clear();
                 for (const auto& pr : packageParseResults) {
                     for (const auto& decl : pr.module.items) {
-                        if (decl) collectImports(*decl);
+                        if (decl) {
+                            collectImports(*decl);
+                        }
                     }
                 }
                 for (const auto& pkgName : imports) {
-                    if (pkgName == pendingManifest.package.name || pkgName == packageName) continue;
-                    if (!enqueueDependency(pkgName, pendingManifest, pendingRoot)) return 1;
+                    if (pkgName == pendingManifest.package.name || pkgName == packageName) {
+                        continue;
+                    }
+                    if (!enqueueDependency(pkgName, pendingManifest, pendingRoot)) {
+                        return 1;
+                    }
                 }
 
                 for (auto& depParse : packageParseResults) {
@@ -892,12 +1041,15 @@ namespace Rux {
         // Semantic analysis
 
         const auto semanticStart = std::chrono::steady_clock::now();
-        if (opts.verbose) std::print("  Analyzing {}\n", manifest->package.name);
+        if (opts.verbose) {
+            std::print("  Analyzing {}\n", manifest->package.name);
+        }
 
         std::vector<const Module*> userModules;
         userModules.reserve(parseResults.size());
-        for (const auto& pr : parseResults)
+        for (const auto& pr : parseResults) {
             userModules.push_back(&pr.module);
+        }
 
         // Build per-package dep info so Sema can isolate imported package symbols.
         std::vector<DepPackage> depPackages;
@@ -906,7 +1058,9 @@ namespace Rux {
             for (std::size_t i = 0; i < depParseResults.size(); ++i) {
                 const std::string& pkgName = loadedPackages[i];
                 auto [it, inserted] = pkgIdx.emplace(pkgName, depPackages.size());
-                if (inserted) depPackages.push_back({pkgName, {}});
+                if (inserted) {
+                    depPackages.push_back({pkgName, {}});
+                }
                 depPackages[it->second].modules.push_back({loadedModuleNames[i], &depParseResults[i].module});
             }
         }
@@ -927,20 +1081,26 @@ namespace Rux {
             std::filesystem::create_directories(semaDir);
             Sema::DumpResult(semaResult, semaDir / "sema.txt");
         }
-        if (semaResult.HasErrors()) return 1;
+        if (semaResult.HasErrors()) {
+            return 1;
+        }
         stats.semantic = ElapsedMs(semanticStart);
 
         // HIR
 
         const auto hirStart = std::chrono::steady_clock::now();
-        if (opts.verbose) std::print("  Lowering {}\n", manifest->package.name);
+        if (opts.verbose) {
+            std::print("  Lowering {}\n", manifest->package.name);
+        }
 
         std::vector<const Module*> hirModules;
         hirModules.reserve(depParseResults.size() + parseResults.size());
-        for (const auto& pr : depParseResults)
+        for (const auto& pr : depParseResults) {
             hirModules.push_back(&pr.module);
-        for (const auto& pr : parseResults)
+        }
+        for (const auto& pr : parseResults) {
             hirModules.push_back(&pr.module);
+        }
 
         Hir hir(hirModules);
         auto hirPackage = hir.Generate();
@@ -955,7 +1115,9 @@ namespace Rux {
         // LIR
 
         const auto lirStart = std::chrono::steady_clock::now();
-        if (opts.verbose) std::print("  Emitting LIR for {}\n", manifest->package.name);
+        if (opts.verbose) {
+            std::print("  Emitting LIR for {}\n", manifest->package.name);
+        }
 
         Lir lir(std::move(hirPackage));
         auto lirPackage = lir.Generate();
@@ -971,7 +1133,9 @@ namespace Rux {
 
         const auto codegenStart = std::chrono::steady_clock::now();
         if (dumpAsm) {
-            if (opts.verbose) std::print("  Emitting assembly for {}\n", manifest->package.name);
+            if (opts.verbose) {
+                std::print("  Emitting assembly for {}\n", manifest->package.name);
+            }
             auto asmDir = manifestPath->parent_path() / "Temp" / "Asm";
             std::filesystem::create_directories(asmDir);
             Asm::Emit(lirPackage, asmDir / "out.asm");
@@ -979,7 +1143,9 @@ namespace Rux {
 
         // RCU object generation
 
-        if (opts.verbose) std::print("  Emitting RCU objects for {}\n", manifest->package.name);
+        if (opts.verbose) {
+            std::print("  Emitting RCU objects for {}\n", manifest->package.name);
+        }
 
         Rcu rcu(lirPackage, std::string(manifest->package.name));
         auto rcuFiles = rcu.Generate();
@@ -1003,7 +1169,9 @@ namespace Rux {
         // Link
 
         const auto linkingStart = std::chrono::steady_clock::now();
-        if (opts.verbose) std::print("   Linking {}\n", manifest->package.name);
+        if (opts.verbose) {
+            std::print("   Linking {}\n", manifest->package.name);
+        }
 
         const auto root = manifestPath->parent_path();
         const auto binDir = ResolveBuildOutputDir(root, *manifest, profileName);
@@ -1016,8 +1184,9 @@ namespace Rux {
 
         Linker linker(std::move(rcuFiles), std::string(manifest->package.name), {root}, buildDll);
         if (!linker.Link(exePath)) {
-            for (const auto& err : linker.Errors())
+            for (const auto& err : linker.Errors()) {
                 std::print(stderr, "error: {}\n", err.message);
+            }
             return 1;
         }
         stats.linking = ElapsedMs(linkingStart);
@@ -1029,7 +1198,9 @@ namespace Rux {
         stats.totalSeconds = ElapsedSeconds(t0, buildEnd);
         std::error_code sizeError;
         stats.executableSize = std::filesystem::file_size(exePath, sizeError);
-        if (sizeError) stats.executableSize = 0;
+        if (sizeError) {
+            stats.executableSize = 0;
+        }
         stats.peakMemoryBytes = PeakMemoryBytes();
 
         if (!opts.quiet && showStats) {
@@ -1058,9 +1229,13 @@ namespace Rux {
             return 1;
         }
         const auto manifestPath = RequireManifest();
-        if (!manifestPath) return 1;
+        if (!manifestPath) {
+            return 1;
+        }
         auto manifest = LoadManifest(*manifestPath);
-        if (!manifest) return 1;
+        if (!manifest) {
+            return 1;
+        }
         const auto root = manifestPath->parent_path();
         const auto outputDir = manifest->build.output.empty()
             ? root / "Bin"
@@ -1069,17 +1244,23 @@ namespace Rux {
                    : std::filesystem::path(manifest->build.output));
         auto removeDir = [&](const std::filesystem::path& dir) -> bool {
             std::error_code ec;
-            if (!std::filesystem::exists(dir)) return true;
+            if (!std::filesystem::exists(dir)) {
+                return true;
+            }
             std::filesystem::remove_all(dir, ec);
             if (ec) {
                 std::print(stderr, "error: failed to remove '{}': {}\n", dir.string(), ec.message());
                 return false;
             }
-            if (!opts.quiet) std::print("     Removed {}\n", dir.string());
+            if (!opts.quiet) {
+                std::print("     Removed {}\n", dir.string());
+            }
             return true;
         };
         bool ok = true;
-        if (!tempOnly) ok &= removeDir(outputDir);
+        if (!tempOnly) {
+            ok &= removeDir(outputDir);
+        }
         ok &= removeDir(root / "Temp");
         return ok ? 0 : 1;
     }
@@ -1099,15 +1280,22 @@ namespace Rux {
             return 1;
         }
         const auto manifestPath = RequireManifest();
-        if (!manifestPath) return 1;
+        if (!manifestPath) {
+            return 1;
+        }
         auto manifest = LoadManifest(*manifestPath);
-        if (!manifest) return 1;
-        if (!opts.quiet)
+        if (!manifest) {
+            return 1;
+        }
+        if (!opts.quiet) {
             std::print("  Generating documentation for {} v{}\n", manifest->package.name, manifest->package.version);
+        }
 
         // TODO: documentation generator
 
-        if (openAfter && !opts.quiet) std::print("     Opening documentation...\n");
+        if (openAfter && !opts.quiet) {
+            std::print("     Opening documentation...\n");
+        }
 
         return 0;
     }
@@ -1132,32 +1320,46 @@ namespace Rux {
             return 1;
         }
         auto manifestPath = RequireManifest();
-        if (!manifestPath) return 1;
+        if (!manifestPath) {
+            return 1;
+        }
         auto root = manifestPath->parent_path();
         if (manifestOnly) {
-            if (!opts.quiet) std::print("  Formatting {}\n", manifestPath->string());
+            if (!opts.quiet) {
+                std::print("  Formatting {}\n", manifestPath->string());
+            }
             // TODO: TOML formatter
             return 0;
         }
         auto sourceDir = root / "Source";
         if (!std::filesystem::exists(sourceDir)) {
-            if (!opts.quiet) std::print("  No source directory found.\n");
+            if (!opts.quiet) {
+                std::print("  No source directory found.\n");
+            }
             return 0;
         }
         int fileCount = 0;
         for (const auto& entry : std::filesystem::recursive_directory_iterator(sourceDir)) {
-            if (!entry.is_regular_file()) continue;
-            if (entry.path().extension() != ".rux") continue;
+            if (!entry.is_regular_file()) {
+                continue;
+            }
+            if (entry.path().extension() != ".rux") {
+                continue;
+            }
             ++fileCount;
             if (!opts.quiet) {
-                if (check)
+                if (check) {
                     std::print("  Checking   {}\n", entry.path().string());
-                else
+                }
+                else {
                     std::print("  Formatting {}\n", entry.path().string());
+                }
             }
             // TODO: source formatter
         }
-        if (fileCount == 0 && !opts.quiet) std::print("  No .rux files found.\n");
+        if (fileCount == 0 && !opts.quiet) {
+            std::print("  No .rux files found.\n");
+        }
         return 0;
     }
 
@@ -1183,11 +1385,16 @@ namespace Rux {
         const auto type = (lib && !bin) ? PackageType::SharedLibrary : PackageType::Executable;
         const auto root = std::filesystem::current_path();
         auto name = root.filename().string();
-        if (!opts.quiet)
+        if (!opts.quiet) {
             std::print(
                 "  Initializing {} package '{}'\n", type == PackageType::Executable ? "binary" : "library", name);
-        if (!ScaffoldPackage(root, name, type, /*initMode=*/true)) return 1;
-        if (!opts.quiet) std::print("   Initialized package '{}'\n", name);
+        }
+        if (!ScaffoldPackage(root, name, type, /*initMode=*/true)) {
+            return 1;
+        }
+        if (!opts.quiet) {
+            std::print("   Initialized package '{}'\n", name);
+        }
         return 0;
     }
 
@@ -1217,11 +1424,15 @@ namespace Rux {
         comps.dwHostNameLength = static_cast<DWORD>(std::size(hostBuf));
         comps.lpszUrlPath = pathBuf;
         comps.dwUrlPathLength = static_cast<DWORD>(std::size(pathBuf));
-        if (!WinHttpCrackUrl(wurl.c_str(), 0, 0, &comps)) return std::nullopt;
+        if (!WinHttpCrackUrl(wurl.c_str(), 0, 0, &comps)) {
+            return std::nullopt;
+        }
 
         HINTERNET hSession = WinHttpOpen(
             L"Rux/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-        if (!hSession) return std::nullopt;
+        if (!hSession) {
+            return std::nullopt;
+        }
 
         HINTERNET hConnect = WinHttpConnect(hSession, hostBuf, comps.nPort, 0);
         if (!hConnect) {
@@ -1247,7 +1458,9 @@ namespace Rux {
             while (WinHttpQueryDataAvailable(hRequest, &avail) && avail > 0) {
                 std::string buf(avail, '\0');
                 DWORD read = 0;
-                if (!WinHttpReadData(hRequest, buf.data(), avail, &read)) break;
+                if (!WinHttpReadData(hRequest, buf.data(), avail, &read)) {
+                    break;
+                }
                 body.append(buf.data(), read);
             }
         }
@@ -1287,13 +1500,16 @@ namespace Rux {
 
     static std::optional<std::string> RunCommandCapture(const std::string& command) {
         FILE* pipe = ::popen(command.c_str(), "r");
-        if (!pipe) return std::nullopt;
+        if (!pipe) {
+            return std::nullopt;
+        }
 
         std::string output;
         std::array<char, 4096> buffer{};
 
-        while (::fgets(buffer.data(), static_cast<int>(buffer.size()), pipe))
+        while (::fgets(buffer.data(), static_cast<int>(buffer.size()), pipe)) {
             output.append(buffer.data());
+        }
 
         const int status = ::pclose(pipe);
         if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
@@ -1305,7 +1521,9 @@ namespace Rux {
 
     static std::optional<std::string> FetchUrl(const std::string& url) {
         const std::string quotedUrl = ShellQuote(url);
-        if (auto body = RunCommandCapture("curl -fsSL " + quotedUrl)) return body;
+        if (auto body = RunCommandCapture("curl -fsSL " + quotedUrl)) {
+            return body;
+        }
         return RunCommandCapture("wget -qO- " + quotedUrl);
     }
 #endif
@@ -1316,22 +1534,26 @@ namespace Rux {
         std::size_t pos = 0;
         while ((pos = json.find(needle, pos)) != std::string_view::npos) {
             std::size_t i = pos + needle.size();
-            while (i < json.size() && (json[i] == ' ' || json[i] == '\t' || json[i] == '\r' || json[i] == '\n'))
+            while (i < json.size() && (json[i] == ' ' || json[i] == '\t' || json[i] == '\r' || json[i] == '\n')) {
                 ++i;
+            }
             if (i >= json.size() || json[i] != ':') {
                 pos = i;
                 continue;
             }
             ++i;
-            while (i < json.size() && (json[i] == ' ' || json[i] == '\t' || json[i] == '\r' || json[i] == '\n'))
+            while (i < json.size() && (json[i] == ' ' || json[i] == '\t' || json[i] == '\r' || json[i] == '\n')) {
                 ++i;
+            }
             if (i >= json.size() || json[i] != '"') {
                 pos = i;
                 continue;
             }
             ++i;
             const auto end = json.find('"', i);
-            if (end == std::string_view::npos) break;
+            if (end == std::string_view::npos) {
+                break;
+            }
             return std::string(json.substr(i, end - i));
         }
         return {};
@@ -1351,7 +1573,9 @@ namespace Rux {
         STARTUPINFOW si{};
         si.cb = sizeof(si);
         PROCESS_INFORMATION pi{};
-        if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) return false;
+        if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+            return false;
+        }
         WaitForSingleObject(pi.hProcess, INFINITE);
         DWORD exitCode = 1;
         GetExitCodeProcess(pi.hProcess, &exitCode);
@@ -1372,7 +1596,9 @@ namespace Rux {
         STARTUPINFOW si{};
         si.cb = sizeof(si);
         PROCESS_INFORMATION pi{};
-        if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) return false;
+        if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+            return false;
+        }
         WaitForSingleObject(pi.hProcess, INFINITE);
         DWORD exitCode = 1;
         GetExitCodeProcess(pi.hProcess, &exitCode);
@@ -1413,7 +1639,9 @@ namespace Rux {
         if (!packageSpec.empty()) {
             auto [pkgName, pkgVersion] = ParsePackageSpec(packageSpec);
 
-            if (!opts.quiet) std::print("     Fetching registry...\n");
+            if (!opts.quiet) {
+                std::print("     Fetching registry...\n");
+            }
 
             const auto jsonOpt = FetchUrl(std::string(kRegistryUrl));
             if (!jsonOpt) {
@@ -1433,17 +1661,23 @@ namespace Rux {
             std::filesystem::create_directories(pkgDir.parent_path(), ec);
 
             if (std::filesystem::exists(pkgDir)) {
-                if (!opts.quiet) std::print("   Up-to-date {}\n", pkgName);
+                if (!opts.quiet) {
+                    std::print("   Up-to-date {}\n", pkgName);
+                }
             }
             else {
-                if (!opts.quiet) std::print("  Downloading {} from {}...\n", pkgName, repoUrl);
+                if (!opts.quiet) {
+                    std::print("  Downloading {} from {}...\n", pkgName, repoUrl);
+                }
 
                 if (!GitClone(repoUrl, pkgDir, packageFromDev)) {
                     std::print(stderr, "error: failed to clone '{}'\n", repoUrl);
                     return 1;
                 }
 
-                if (!opts.quiet) std::print("    Installed {} at {}\n", pkgName, pkgDir.string());
+                if (!opts.quiet) {
+                    std::print("    Installed {} at {}\n", pkgName, pkgDir.string());
+                }
             }
 
             return 0;
@@ -1451,10 +1685,14 @@ namespace Rux {
 
         // Install dependencies from current project
         const auto manifestPath = RequireManifest();
-        if (!manifestPath) return 1;
+        if (!manifestPath) {
+            return 1;
+        }
 
         auto manifest = LoadManifest(*manifestPath);
-        if (!manifest) return 1;
+        if (!manifest) {
+            return 1;
+        }
 
         std::vector<std::string> queue;
         std::unordered_set<std::string> queued;
@@ -1471,12 +1709,16 @@ namespace Rux {
         }
 
         if (queue.empty()) {
-            if (!opts.quiet) std::print("  No registry dependencies to install.\n");
+            if (!opts.quiet) {
+                std::print("  No registry dependencies to install.\n");
+            }
 
             return 0;
         }
 
-        if (!opts.quiet) std::print("     Fetching registry...\n");
+        if (!opts.quiet) {
+            std::print("     Fetching registry...\n");
+        }
 
         const auto jsonOpt = FetchUrl(std::string(kRegistryUrl));
         if (!jsonOpt) {
@@ -1502,19 +1744,25 @@ namespace Rux {
             std::filesystem::create_directories(pkgDir.parent_path(), ec);
 
             if (std::filesystem::exists(pkgDir)) {
-                if (!opts.quiet) std::print("   Up-to-date {}\n", pkgName);
+                if (!opts.quiet) {
+                    std::print("   Up-to-date {}\n", pkgName);
+                }
 
                 ++upToDate;
             }
             else {
-                if (!opts.quiet) std::print("  Downloading {} from {}...\n", pkgName, repoUrl);
+                if (!opts.quiet) {
+                    std::print("  Downloading {} from {}...\n", pkgName, repoUrl);
+                }
 
                 if (!GitClone(repoUrl, pkgDir, packageFromDev)) {
                     std::print(stderr, "error: failed to clone '{}'\n", repoUrl);
                     return 1;
                 }
 
-                if (!opts.quiet) std::print("    Installed {} at {}\n", pkgName, pkgDir.string());
+                if (!opts.quiet) {
+                    std::print("    Installed {} at {}\n", pkgName, pkgDir.string());
+                }
 
                 ++installed;
             }
@@ -1531,7 +1779,9 @@ namespace Rux {
             }
         }
 
-        if (!opts.quiet) std::print("     Summary: {} installed, {} already up-to-date\n", installed, upToDate);
+        if (!opts.quiet) {
+            std::print("     Summary: {} installed, {} already up-to-date\n", installed, upToDate);
+        }
 
         return 0;
     }
@@ -1563,21 +1813,32 @@ namespace Rux {
                 std::print(stderr, "error: failed to remove '{}': {}\n", pkgDir.string(), ec.message());
                 return 1;
             }
-            if (!opts.quiet) std::print("   Uninstalled {}\n", packageName);
+            if (!opts.quiet) {
+                std::print("   Uninstalled {}\n", packageName);
+            }
             return 0;
         }
 
         const auto manifestPath = RequireManifest();
-        if (!manifestPath) return 1;
+        if (!manifestPath) {
+            return 1;
+        }
         auto manifest = LoadManifest(*manifestPath);
-        if (!manifest) return 1;
+        if (!manifest) {
+            return 1;
+        }
 
         std::vector<std::string> toRemove;
-        for (const auto& dep : manifest->EffectiveDependencies(HostTargetTriple()))
-            if (dep.path.empty()) toRemove.push_back(DependencyPackageName(dep));
+        for (const auto& dep : manifest->EffectiveDependencies(HostTargetTriple())) {
+            if (dep.path.empty()) {
+                toRemove.push_back(DependencyPackageName(dep));
+            }
+        }
 
         if (toRemove.empty()) {
-            if (!opts.quiet) std::print("  No registry dependencies to uninstall.\n");
+            if (!opts.quiet) {
+                std::print("  No registry dependencies to uninstall.\n");
+            }
             return 0;
         }
 
@@ -1586,7 +1847,9 @@ namespace Rux {
         for (const auto& pkgName : toRemove) {
             const std::filesystem::path pkgDir = RegistryPackagesDir() / pkgName;
             if (!std::filesystem::exists(pkgDir)) {
-                if (!opts.quiet) std::print("  Not installed {}\n", pkgName);
+                if (!opts.quiet) {
+                    std::print("  Not installed {}\n", pkgName);
+                }
                 ++notFound;
                 continue;
             }
@@ -1596,10 +1859,14 @@ namespace Rux {
                 std::print(stderr, "error: failed to remove '{}': {}\n", pkgDir.string(), ec.message());
                 return 1;
             }
-            if (!opts.quiet) std::print("   Uninstalled {}\n", pkgName);
+            if (!opts.quiet) {
+                std::print("   Uninstalled {}\n", pkgName);
+            }
             ++removed;
         }
-        if (!opts.quiet) std::print("     Summary: {} uninstalled, {} not installed\n", removed, notFound);
+        if (!opts.quiet) {
+            std::print("     Summary: {} uninstalled, {} not installed\n", removed, notFound);
+        }
         return 0;
     }
 
@@ -1623,37 +1890,50 @@ namespace Rux {
             std::vector<std::string> packages;
             std::error_code ec;
             if (std::filesystem::exists(cacheDir, ec)) {
-                for (const auto& entry : std::filesystem::directory_iterator(cacheDir, ec))
-                    if (entry.is_directory()) packages.push_back(entry.path().filename().string());
+                for (const auto& entry : std::filesystem::directory_iterator(cacheDir, ec)) {
+                    if (entry.is_directory()) {
+                        packages.push_back(entry.path().filename().string());
+                    }
+                }
                 std::ranges::sort(packages);
             }
             if (packages.empty()) {
-                if (!opts.quiet) std::print("  Global cache is empty ({})\n", cacheDir.string());
+                if (!opts.quiet) {
+                    std::print("  Global cache is empty ({})\n", cacheDir.string());
+                }
                 return 0;
             }
             std::print("Global cache ({} package{} at {}):\n",
                        packages.size(),
                        packages.size() == 1 ? "" : "s",
                        cacheDir.string());
-            for (const auto& pkg : packages)
+            for (const auto& pkg : packages) {
                 std::print("  {}\n", pkg);
+            }
             return 0;
         }
 
         const auto manifestPath = RequireManifest();
-        if (!manifestPath) return 1;
+        if (!manifestPath) {
+            return 1;
+        }
         auto manifest = LoadManifest(*manifestPath);
-        if (!manifest) return 1;
+        if (!manifest) {
+            return 1;
+        }
 
         if (manifest->dependencies.empty()) {
-            if (!opts.quiet) std::print("  No dependencies.\n");
+            if (!opts.quiet) {
+                std::print("  No dependencies.\n");
+            }
             return 0;
         }
 
         std::print("Dependencies ({}):\n", manifest->dependencies.size());
         for (const auto& dep : manifest->dependencies) {
-            if (!dep.path.empty())
+            if (!dep.path.empty()) {
                 std::print("  {} (path: {})\n", dep.name, dep.path);
+            }
             else {
                 const std::string ver = dep.version.empty() ? "latest" : dep.version;
                 std::print("  {} @ {}\n", dep.name, ver);
@@ -1699,16 +1979,23 @@ namespace Rux {
         }
         const auto type = (lib && !bin) ? PackageType::SharedLibrary : PackageType::Executable;
         std::filesystem::path root;
-        if (!customPath.empty())
+        if (!customPath.empty()) {
             root = std::filesystem::path(customPath) / name;
-        else
+        }
+        else {
             root = std::filesystem::current_path() / name;
-        if (!opts.quiet)
+        }
+        if (!opts.quiet) {
             std::print("Creating {} package '{}'\n",
                        type == PackageType::Executable ? "binary" : "library",
                        std::string(name));
-        if (!ScaffoldPackage(root, std::string(name), type, /*initMode=*/false)) return 1;
-        if (!opts.quiet) std::print("Created package '{}' at {}\n", std::string(name), root.string());
+        }
+        if (!ScaffoldPackage(root, std::string(name), type, /*initMode=*/false)) {
+            return 1;
+        }
+        if (!opts.quiet) {
+            std::print("Created package '{}' at {}\n", std::string(name), root.string());
+        }
         return 0;
     }
 
@@ -1742,9 +2029,13 @@ namespace Rux {
             return 1;
         }
         auto manifestPath = RequireManifest();
-        if (!manifestPath) return 1;
+        if (!manifestPath) {
+            return 1;
+        }
         auto manifest = LoadManifest(*manifestPath);
-        if (!manifest) return 1;
+        if (!manifest) {
+            return 1;
+        }
         auto [pkgName, pkgVersion] = ParsePackageSpec(spec);
 
         if (!pathArg.empty()) {
@@ -1754,15 +2045,19 @@ namespace Rux {
                 return 1;
             }
             if (!opts.quiet) {
-                if (changed)
+                if (changed) {
                     std::print("Added {} @ path '{}'\n", pkgName, pathArg);
-                else
+                }
+                else {
                     std::print("Up-to-date {} @ path '{}'\n", pkgName, pathArg);
+                }
             }
             return 0;
         }
 
-        if (!opts.quiet) std::print("     Fetching registry...\n");
+        if (!opts.quiet) {
+            std::print("     Fetching registry...\n");
+        }
 
         const auto jsonOpt = FetchUrl(std::string(kRegistryUrl));
         if (!jsonOpt) {
@@ -1782,10 +2077,12 @@ namespace Rux {
         }
         if (!opts.quiet) {
             const std::string ver = pkgVersion.empty() ? "latest" : pkgVersion;
-            if (changed)
+            if (changed) {
                 std::print("Added {} @ {}\n", pkgName, ver);
-            else
+            }
+            else {
                 std::print("Up-to-date {} @ {}\n", pkgName, ver);
+            }
         }
         return 0;
     }
@@ -1810,9 +2107,13 @@ namespace Rux {
             return 1;
         }
         auto manifestPath = RequireManifest();
-        if (!manifestPath) return 1;
+        if (!manifestPath) {
+            return 1;
+        }
         auto manifest = LoadManifest(*manifestPath);
-        if (!manifest) return 1;
+        if (!manifest) {
+            return 1;
+        }
         std::string pkgName(name);
         if (!manifest->RemoveDependency(pkgName)) {
             std::print(stderr, "error: package '{}' is not a dependency\n", pkgName);
@@ -1822,7 +2123,9 @@ namespace Rux {
             std::print(stderr, "error: failed to write '{}'\n", manifestPath->string());
             return 1;
         }
-        if (!opts.quiet) std::print("     Removed {}\n", pkgName);
+        if (!opts.quiet) {
+            std::print("     Removed {}\n", pkgName);
+        }
         return 0;
     }
 
@@ -1851,19 +2154,33 @@ namespace Rux {
             return 1;
         }
         auto manifestPath = RequireManifest();
-        if (!manifestPath) return 1;
+        if (!manifestPath) {
+            return 1;
+        }
         auto manifest = LoadManifest(*manifestPath);
-        if (!manifest) return 1;
+        if (!manifest) {
+            return 1;
+        }
         // Build first
         GlobalOptions buildOpts = opts;
-        if (!opts.verbose) buildOpts.quiet = true;
+        if (!opts.verbose) {
+            buildOpts.quiet = true;
+        }
 
         std::vector<std::string_view> buildArgs;
-        if (isRelease) buildArgs.emplace_back("--release");
-        if (buildOpts.quiet) buildArgs.emplace_back("--quiet");
-        if (buildOpts.verbose) buildArgs.emplace_back("--verbose");
+        if (isRelease) {
+            buildArgs.emplace_back("--release");
+        }
+        if (buildOpts.quiet) {
+            buildArgs.emplace_back("--quiet");
+        }
+        if (buildOpts.verbose) {
+            buildArgs.emplace_back("--verbose");
+        }
         int rc = RunBuild(buildArgs, buildOpts);
-        if (rc != 0) return rc;
+        if (rc != 0) {
+            return rc;
+        }
         std::string_view profileName = isRelease ? "Release" : "Debug";
         auto root = manifestPath->parent_path();
         auto binDir = ResolveBuildOutputDir(root, *manifest, profileName);
@@ -1883,7 +2200,9 @@ namespace Rux {
             std::print(stderr, "error: executable not found: '{}'\n", exePath.string());
             return 1;
         }
-        if (opts.verbose && !opts.quiet) std::print("     Running `{}`\n", exePath.string());
+        if (opts.verbose && !opts.quiet) {
+            std::print("     Running `{}`\n", exePath.string());
+        }
 #if RUX_OS_WINDOWS
         std::string cmdLine = "\"" + exePath.string() + "\"";
         for (const auto& a : runArgs) {
@@ -1911,12 +2230,14 @@ namespace Rux {
 #else
         std::vector<std::string> argStrings;
         argStrings.push_back(exePath.string());
-        for (const auto& a : runArgs)
+        for (const auto& a : runArgs) {
             argStrings.emplace_back(a);
+        }
 
         std::vector<char*> argv;
-        for (auto& s : argStrings)
+        for (auto& s : argStrings) {
             argv.push_back(s.data());
+        }
         argv.push_back(nullptr);
 
         pid_t pid = fork();
@@ -1951,14 +2272,22 @@ namespace Rux {
             return 1;
         }
         auto manifestPath = RequireManifest();
-        if (!manifestPath) return 1;
+        if (!manifestPath) {
+            return 1;
+        }
         auto manifest = LoadManifest(*manifestPath);
-        if (!manifest) return 1;
-        if (!opts.quiet) std::print("     Testing {} v{}\n", manifest->package.name, manifest->package.version);
+        if (!manifest) {
+            return 1;
+        }
+        if (!opts.quiet) {
+            std::print("     Testing {} v{}\n", manifest->package.name, manifest->package.version);
+        }
         // TODO: build and run test targets
         std::println("Running executable...");
         std::println("Release: {}", isRelease);
-        if (!opts.quiet) std::print("    Finished running tests\n");
+        if (!opts.quiet) {
+            std::print("    Finished running tests\n");
+        }
         return 0;
     }
 
@@ -1982,31 +2311,44 @@ namespace Rux {
             std::vector<std::filesystem::path> pkgDirs;
             std::error_code ec;
             if (std::filesystem::exists(cacheDir, ec)) {
-                for (const auto& entry : std::filesystem::directory_iterator(cacheDir, ec))
-                    if (entry.is_directory()) pkgDirs.push_back(entry.path());
+                for (const auto& entry : std::filesystem::directory_iterator(cacheDir, ec)) {
+                    if (entry.is_directory()) {
+                        pkgDirs.push_back(entry.path());
+                    }
+                }
             }
             if (pkgDirs.empty()) {
-                if (!opts.quiet) std::print("  No packages in global cache to update.\n");
+                if (!opts.quiet) {
+                    std::print("  No packages in global cache to update.\n");
+                }
                 return 0;
             }
             int updated = 0;
             for (const auto& pkgDir : pkgDirs) {
                 const std::string pkgName = pkgDir.filename().string();
-                if (!opts.quiet) std::print("    Updating {}...\n", pkgName);
+                if (!opts.quiet) {
+                    std::print("    Updating {}...\n", pkgName);
+                }
                 if (!GitPull(pkgDir)) {
                     std::print(stderr, "error: failed to update '{}'\n", pkgName);
                     return 1;
                 }
                 ++updated;
             }
-            if (!opts.quiet) std::print("     Summary: {} updated\n", updated);
+            if (!opts.quiet) {
+                std::print("     Summary: {} updated\n", updated);
+            }
             return 0;
         }
 
         const auto manifestPath = RequireManifest();
-        if (!manifestPath) return 1;
+        if (!manifestPath) {
+            return 1;
+        }
         auto manifest = LoadManifest(*manifestPath);
-        if (!manifest) return 1;
+        if (!manifest) {
+            return 1;
+        }
 
         std::vector<std::string> queue;
         std::unordered_set<std::string> queued;
@@ -2020,11 +2362,15 @@ namespace Rux {
         }
 
         if (queue.empty()) {
-            if (!opts.quiet) std::print("  No registry dependencies to update.\n");
+            if (!opts.quiet) {
+                std::print("  No registry dependencies to update.\n");
+            }
             return 0;
         }
 
-        if (!opts.quiet) std::print("     Fetching registry...\n");
+        if (!opts.quiet) {
+            std::print("     Fetching registry...\n");
+        }
 
         const auto jsonOpt = FetchUrl(std::string(kRegistryUrl));
         if (!jsonOpt) {
@@ -2046,7 +2392,9 @@ namespace Rux {
             std::filesystem::create_directories(pkgDir.parent_path(), ec);
 
             if (std::filesystem::exists(pkgDir)) {
-                if (!opts.quiet) std::print("    Updating {}...\n", pkgName);
+                if (!opts.quiet) {
+                    std::print("    Updating {}...\n", pkgName);
+                }
                 if (!GitPull(pkgDir)) {
                     std::print(stderr, "error: failed to update '{}'\n", pkgName);
                     return 1;
@@ -2054,12 +2402,16 @@ namespace Rux {
                 ++updated;
             }
             else {
-                if (!opts.quiet) std::print("  Downloading {} from {}...\n", pkgName, repoUrl);
+                if (!opts.quiet) {
+                    std::print("  Downloading {} from {}...\n", pkgName, repoUrl);
+                }
                 if (!GitClone(repoUrl, pkgDir, false)) {
                     std::print(stderr, "error: failed to clone '{}'\n", repoUrl);
                     return 1;
                 }
-                if (!opts.quiet) std::print("    Installed {} at {}\n", pkgName, pkgDir.string());
+                if (!opts.quiet) {
+                    std::print("    Installed {} at {}\n", pkgName, pkgDir.string());
+                }
                 ++installed;
             }
 
@@ -2074,7 +2426,9 @@ namespace Rux {
                 }
             }
         }
-        if (!opts.quiet) std::print("     Summary: {} updated, {} newly installed\n", updated, installed);
+        if (!opts.quiet) {
+            std::print("     Summary: {} updated, {} newly installed\n", updated, installed);
+        }
         return 0;
     }
 
@@ -2170,10 +2524,12 @@ namespace Rux {
                 std::print("\nDependencies:\n");
 
                 for (const auto& dep : manifest->dependencies) {
-                    if (!dep.path.empty())
+                    if (!dep.path.empty()) {
                         std::print("  - {} (path: {})\n", dep.name, dep.path);
-                    else
+                    }
+                    else {
                         std::print("  - {} @ {}\n", dep.name, dep.version.empty() ? "*" : dep.version);
+                    }
                 }
             }
         }
@@ -2242,8 +2598,12 @@ namespace Rux {
         for (std::size_t i = 0; i < args.size(); ++i) {
             std::string_view arg = args[i];
 
-            if (arg == "-q" || arg == "--quiet") continue;
-            if (arg == "-v" || arg == "--verbose") continue;
+            if (arg == "-q" || arg == "--quiet") {
+                continue;
+            }
+            if (arg == "-v" || arg == "--verbose") {
+                continue;
+            }
 
             if (arg == "--json") {
                 jsonOutput = true;
@@ -2288,13 +2648,17 @@ namespace Rux {
 
         auto manifestPath = RequireManifest();
         if (!manifestPath) {
-            if (jsonOutput) EmitFatal("could not find 'Rux.toml' in current directory or any parent directory");
+            if (jsonOutput) {
+                EmitFatal("could not find 'Rux.toml' in current directory or any parent directory");
+            }
             return 1;
         }
 
         auto manifest = LoadManifest(*manifestPath);
         if (!manifest) {
-            if (jsonOutput) EmitFatal("failed to parse 'Rux.toml'");
+            if (jsonOutput) {
+                EmitFatal("failed to parse 'Rux.toml'");
+            }
             return 1;
         }
 
@@ -2336,7 +2700,9 @@ namespace Rux {
 
         auto loadResult = SourceLoader::Load(manifestPath->parent_path());
         if (!loadResult) {
-            if (jsonOutput) EmitFatal("failed to load source files");
+            if (jsonOutput) {
+                EmitFatal("failed to load source files");
+            }
             return 1;
         }
 
@@ -2355,7 +2721,9 @@ namespace Rux {
         lexResults.reserve(loadResult->files.size());
 
         for (const auto& file : loadResult->files) {
-            if (opts.verbose && !jsonOutput) std::print("    Lexing {}\n", file.path.string());
+            if (opts.verbose && !jsonOutput) {
+                std::print("    Lexing {}\n", file.path.string());
+            }
 
             Lexer lexer(file.source, file.path.string());
             auto lexResult = lexer.Tokenize();
@@ -2365,12 +2733,16 @@ namespace Rux {
                 const char* sev = diag.severity == LexerDiagnostic::Severity::Error ? "error" : "warning";
                 EmitDiag(
                     file.path.string(), static_cast<int>(loc.line), static_cast<int>(loc.column), sev, diag.message);
-                if (diag.severity == LexerDiagnostic::Severity::Error) lexErrors = true;
+                if (diag.severity == LexerDiagnostic::Severity::Error) {
+                    lexErrors = true;
+                }
             }
             lexResults.push_back(std::move(lexResult));
         }
 
-        if (lexErrors) hadErrors = true;
+        if (lexErrors) {
+            hadErrors = true;
+        }
 
         bool parseErrors = false;
         std::vector<ParseResult> parseResults;
@@ -2378,10 +2750,14 @@ namespace Rux {
 
         for (std::size_t fileIndex = 0; fileIndex < loadResult->files.size(); ++fileIndex) {
             const auto& file = loadResult->files[fileIndex];
-            if (opts.verbose && !jsonOutput) std::print("    Parsing {}\n", file.path.string());
+            if (opts.verbose && !jsonOutput) {
+                std::print("    Parsing {}\n", file.path.string());
+            }
 
             auto& lexResult = lexResults[fileIndex];
-            if (lexResult.HasErrors()) continue;
+            if (lexResult.HasErrors()) {
+                continue;
+            }
 
             Parser parser(std::move(lexResult.tokens), file.path.string());
             auto parseResult = parser.Parse();
@@ -2391,7 +2767,9 @@ namespace Rux {
                 const char* sev = diag.severity == ParserDiagnostic::Severity::Error ? "error" : "warning";
                 EmitDiag(
                     file.path.string(), static_cast<int>(loc.line), static_cast<int>(loc.column), sev, diag.message);
-                if (diag.severity == ParserDiagnostic::Severity::Error) parseErrors = true;
+                if (diag.severity == ParserDiagnostic::Severity::Error) {
+                    parseErrors = true;
+                }
             }
 
             if (!parseResult.HasErrors()) {
@@ -2400,7 +2778,9 @@ namespace Rux {
             }
         }
 
-        if (parseErrors) hadErrors = true;
+        if (parseErrors) {
+            hadErrors = true;
+        }
 
         std::vector<ParseResult> depParseResults;
         std::vector<std::string> loadedPackages;
@@ -2418,7 +2798,9 @@ namespace Rux {
         auto enqueueDependency = [&](const std::string& pkgName,
                                      const Manifest& ownerManifest,
                                      const std::filesystem::path& ownerRoot) -> bool {
-            if (queuedPackageNames.count(pkgName)) return true;
+            if (queuedPackageNames.count(pkgName)) {
+                return true;
+            }
 
             const auto deps = ownerManifest.EffectiveDependencies(targetName);
             std::optional<Dependency> targetDep;
@@ -2482,13 +2864,19 @@ namespace Rux {
 
             void collect(const Decl& decl) {
                 if (const auto* ud = dynamic_cast<const UseDecl*>(&decl)) {
-                    if (!DeclMatchesTarget(*ud, target)) return;
-                    if (!ud->path.empty()) imports.push_back(ud->path[0]);
+                    if (!DeclMatchesTarget(*ud, target)) {
+                        return;
+                    }
+                    if (!ud->path.empty()) {
+                        imports.push_back(ud->path[0]);
+                    }
                     return;
                 }
                 if (const auto* mod = dynamic_cast<const ModuleDecl*>(&decl)) {
                     for (const auto& item : mod->items) {
-                        if (item) collect(*item);
+                        if (item) {
+                            collect(*item);
+                        }
                     }
                 }
             }
@@ -2497,11 +2885,15 @@ namespace Rux {
         for (const auto& pr : parseResults) {
             imports.clear();
             for (const auto& decl : pr.module.items) {
-                if (decl) collector.collect(*decl);
+                if (decl) {
+                    collector.collect(*decl);
+                }
             }
 
             for (const auto& pkgName : imports) {
-                if (pkgName == manifest->package.name) continue;
+                if (pkgName == manifest->package.name) {
+                    continue;
+                }
                 if (!enqueueDependency(pkgName, *manifest, manifestPath->parent_path())) {
                     hadErrors = true;
                     break;
@@ -2552,7 +2944,9 @@ namespace Rux {
                                  static_cast<int>(diag.location.column),
                                  sev,
                                  diag.message);
-                        if (diag.severity == LexerDiagnostic::Severity::Error) hadErrors = true;
+                        if (diag.severity == LexerDiagnostic::Severity::Error) {
+                            hadErrors = true;
+                        }
                     }
                     if (depLex.HasErrors()) {
                         hadErrors = true;
@@ -2569,7 +2963,9 @@ namespace Rux {
                                  static_cast<int>(diag.location.column),
                                  sev,
                                  diag.message);
-                        if (diag.severity == ParserDiagnostic::Severity::Error) hadErrors = true;
+                        if (diag.severity == ParserDiagnostic::Severity::Error) {
+                            hadErrors = true;
+                        }
                     }
                     if (depParse.HasErrors()) {
                         hadErrors = true;
@@ -2580,25 +2976,33 @@ namespace Rux {
                     packageParseResults.push_back(std::move(depParse));
                 }
 
-                if (hadErrors) break;
+                if (hadErrors) {
+                    break;
+                }
 
                 imports.clear();
                 for (const auto& pr : packageParseResults) {
                     for (const auto& decl : pr.module.items) {
-                        if (decl) collector.collect(*decl);
+                        if (decl) {
+                            collector.collect(*decl);
+                        }
                     }
                 }
 
                 for (const auto& pkgName : imports) {
                     const auto& currentPkg = pendingPackages[pendingIndex];
-                    if (pkgName == currentPkg.manifest.package.name || pkgName == currentPkg.name) continue;
+                    if (pkgName == currentPkg.manifest.package.name || pkgName == currentPkg.name) {
+                        continue;
+                    }
                     if (!enqueueDependency(pkgName, currentPkg.manifest, currentPkg.root)) {
                         hadErrors = true;
                         break;
                     }
                 }
 
-                if (hadErrors) break;
+                if (hadErrors) {
+                    break;
+                }
 
                 for (auto& depParse : packageParseResults) {
                     loadedModuleNames.push_back(depParse.module.name);
@@ -2611,15 +3015,18 @@ namespace Rux {
         if (!hadErrors) {
             std::vector<const Module*> userModules;
             userModules.reserve(parseResults.size());
-            for (const auto& pr : parseResults)
+            for (const auto& pr : parseResults) {
                 userModules.push_back(&pr.module);
+            }
 
             std::vector<DepPackage> depPackages;
             std::unordered_map<std::string, std::size_t> pkgIdx;
             for (std::size_t i = 0; i < depParseResults.size(); ++i) {
                 const std::string& pkgName = loadedPackages[i];
                 auto [it, inserted] = pkgIdx.emplace(pkgName, depPackages.size());
-                if (inserted) depPackages.push_back({pkgName, {}});
+                if (inserted) {
+                    depPackages.push_back({pkgName, {}});
+                }
                 depPackages[it->second].modules.push_back({loadedModuleNames[i], &depParseResults[i].module});
             }
 
@@ -2633,10 +3040,14 @@ namespace Rux {
                 const auto& loc = diag.location;
                 const char* sev = diag.severity == SemaDiagnostic::Severity::Error ? "error" : "warning";
                 EmitDiag(diag.sourceName, static_cast<int>(loc.line), static_cast<int>(loc.column), sev, diag.message);
-                if (diag.severity == SemaDiagnostic::Severity::Error) hadErrors = true;
+                if (diag.severity == SemaDiagnostic::Severity::Error) {
+                    hadErrors = true;
+                }
             }
 
-            if (semaResult.HasErrors()) hadErrors = true;
+            if (semaResult.HasErrors()) {
+                hadErrors = true;
+            }
         }
 
         if (jsonOutput) {
@@ -3056,9 +3467,11 @@ namespace Rux {
     }
 
     void Cli::PrintUnknownOption(std::string_view option, std::string_view command) {
-        if (command.empty())
+        if (command.empty()) {
             std::print(stderr, "error: unknown option '{}'\n", option);
-        else
+        }
+        else {
             std::print(stderr, "error: unknown option '{}' for command '{}'\n", option, command);
+        }
     }
 } // namespace Rux

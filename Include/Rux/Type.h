@@ -29,17 +29,17 @@ namespace Rux {
             UInt, // platform-dependent: 64-bit on x64, 32-bit on x86
             Float32,
             Float64,
-            Str, // String
-            Pointer, // *T  — inner[0] = pointee
-            Slice, // T[] / T[N]  — inner[0] = element
-            Range, // lo..hi / lo...hi — inner[0] = element
-            Tuple, // (T, U, ...) — inner = elements
-            Named, // user-defined struct/enum/union — name = type name
+            Str,       // String
+            Pointer,   // *T  — inner[0] = pointee
+            Slice,     // T[] / T[N]  — inner[0] = element
+            Range,     // lo..hi / lo...hi — inner[0] = element
+            Tuple,     // (T, U, ...) — inner = elements
+            Named,     // user-defined struct/enum/union — name = type name
             TypeParam, // generic parameter T — name = param name
-            Func, // func(...) -> T — inner[0..n-2] = params, inner[n-1] = return
+            Func,      // func(...) -> T — inner[0..n-2] = params, inner[n-1] = return
             // Aliases — must come after all concrete values so they don't shift the counter
-            Bool = Bool8, // bool is an alias for bool8
-            Char = Char32, // char is an alias for char32
+            Bool = Bool8,    // bool is an alias for bool8
+            Char = Char32,   // char is an alias for char32
             Float = Float64, // float is an alias for float64
         };
 

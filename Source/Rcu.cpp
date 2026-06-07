@@ -45,14 +45,18 @@ namespace Rux {
                 for (const auto& elem : t.inner) {
                     const int sz = SizeOf(elem);
                     const int al = sz > 0 ? std::min(sz, 8) : 1;
-                    if (al > 1) offset = alignUp(offset, al);
+                    if (al > 1) {
+                        offset = alignUp(offset, al);
+                    }
                     offset += sz > 0 ? sz : 8;
                     maxAlign = std::max(maxAlign, al);
                 }
                 return alignUp(offset, maxAlign);
             }
             case TypeRef::Kind::Named:
-                if (!t.inner.empty()) return SizeOf(t.inner[0]);
+                if (!t.inner.empty()) {
+                    return SizeOf(t.inner[0]);
+                }
                 return 8;
             default:
                 return 8; // int, uint, int64, uint64, float64, pointer, str, named, …
@@ -79,14 +83,18 @@ namespace Rux {
                 "u",
             };
             for (const auto suffix : suffixes) {
-                if (text.size() > suffix.size() && text.substr(text.size() - suffix.size()) == suffix) return suffix;
+                if (text.size() > suffix.size() && text.substr(text.size() - suffix.size()) == suffix) {
+                    return suffix;
+                }
             }
             return {};
         }
 
         std::optional<std::uint64_t> ParseIntegerLiteralBits(std::string_view text) {
             const std::string_view suffix = NumericLiteralSuffix(text);
-            if (!suffix.empty()) text.remove_suffix(suffix.size());
+            if (!suffix.empty()) {
+                text.remove_suffix(suffix.size());
+            }
 
             bool negative = false;
             if (!text.empty() && (text.front() == '-' || text.front() == '+')) {
@@ -97,7 +105,9 @@ namespace Rux {
             std::string cleaned;
             cleaned.reserve(text.size());
             for (const char c : text) {
-                if (c != '_') cleaned.push_back(c);
+                if (c != '_') {
+                    cleaned.push_back(c);
+                }
             }
 
             int base = 10;
@@ -123,18 +133,26 @@ namespace Rux {
                     break;
                 }
             }
-            if (digits.empty()) return std::nullopt;
+            if (digits.empty()) {
+                return std::nullopt;
+            }
 
             std::uint64_t value = 0;
             const auto* first = digits.data();
             const auto* last = first + digits.size();
             const auto [ptr, ec] = std::from_chars(first, last, value, base);
-            if (ec != std::errc{} || ptr != last) return std::nullopt;
-            if (!negative) return value;
+            if (ec != std::errc{} || ptr != last) {
+                return std::nullopt;
+            }
+            if (!negative) {
+                return value;
+            }
 
             constexpr std::uint64_t maxNegativeMagnitude =
                 static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()) + 1;
-            if (value > maxNegativeMagnitude) return std::nullopt;
+            if (value > maxNegativeMagnitude) {
+                return std::nullopt;
+            }
             return std::uint64_t{0} - value;
         }
 
@@ -150,9 +168,13 @@ namespace Rux {
             }
 
             uint32_t Intern(const std::string& s) {
-                if (s.empty()) return 0;
+                if (s.empty()) {
+                    return 0;
+                }
                 auto it = map_.find(s);
-                if (it != map_.end()) return it->second;
+                if (it != map_.end()) {
+                    return it->second;
+                }
                 const auto off = static_cast<uint32_t>(data_.size());
                 map_[s] = off;
                 data_.insert(data_.end(), s.begin(), s.end());
@@ -169,7 +191,9 @@ namespace Rux {
             }
 
             [[nodiscard]] std::string Get(const uint32_t off) const {
-                if (off >= data_.size()) return {};
+                if (off >= data_.size()) {
+                    return {};
+                }
                 return {data_.data() + off};
             }
 
@@ -452,7 +476,9 @@ namespace Rux {
             void MovArgLoadWin64(const int idx, const int32_t d) const {
                 static constexpr uint8_t rex[] = {0x48, 0x48, 0x4C, 0x4C};
                 static constexpr uint8_t modrm[] = {0x8D, 0x95, 0x85, 0x8D};
-                if (idx >= 4) return;
+                if (idx >= 4) {
+                    return;
+                }
                 Byte(rex[idx]);
                 Byte(0x8B);
                 Byte(modrm[idx]);
@@ -462,7 +488,9 @@ namespace Rux {
             void MovArgStoreWin64(const int idx, const int32_t d) const {
                 static constexpr uint8_t rex[] = {0x48, 0x48, 0x4C, 0x4C};
                 static constexpr uint8_t modrm[] = {0x8D, 0x95, 0x85, 0x8D};
-                if (idx >= 4) return;
+                if (idx >= 4) {
+                    return;
+                }
                 Byte(rex[idx]);
                 Byte(0x89);
                 Byte(modrm[idx]);
@@ -526,7 +554,9 @@ namespace Rux {
             void LeaArgStackWin64(const int idx, const int32_t d) const {
                 static constexpr uint8_t rex[] = {0x48, 0x48, 0x4C, 0x4C};
                 static constexpr uint8_t modrm[] = {0x8D, 0x95, 0x85, 0x8D};
-                if (idx >= 4) return;
+                if (idx >= 4) {
+                    return;
+                }
                 Byte(rex[idx]);
                 Byte(0x8D);
                 Byte(modrm[idx]);
@@ -1161,7 +1191,9 @@ namespace Rux {
         };
 
         CallingConvention EffectiveConv(const CallingConvention c) {
-            if (c != CallingConvention::Default) return c;
+            if (c != CallingConvention::Default) {
+                return c;
+            }
             return CallingConvention::Win64;
         }
 
@@ -1277,10 +1309,16 @@ namespace Rux {
                 }
                 if (t.kind == TypeRef::Kind::Named) {
                     const std::string base = BaseTypeName(t.name);
-                    if (interfaceNames.count(base)) return 16;
-                    if (base == "Slice") return 16;
+                    if (interfaceNames.count(base)) {
+                        return 16;
+                    }
+                    if (base == "Slice") {
+                        return 16;
+                    }
                     auto it = layouts.find(base);
-                    if (it != layouts.end()) return it->second.totalSize;
+                    if (it != layouts.end()) {
+                        return it->second.totalSize;
+                    }
                 }
                 return SizeOf(t);
             }
@@ -1290,7 +1328,9 @@ namespace Rux {
             }
 
             [[nodiscard]] bool IsWin64AddressParam(const TypeRef& t) const {
-                if (t.kind != TypeRef::Kind::Named) return false;
+                if (t.kind != TypeRef::Kind::Named) {
+                    return false;
+                }
                 const std::string base = BaseTypeName(t.name);
                 return base == "Slice" || interfaceNames.count(base) > 0;
             }
@@ -1312,7 +1352,9 @@ namespace Rux {
 
             uint32_t GetOrAddExtern(const std::string& name, uint8_t kind, const std::string& dll = {}) {
                 auto it = externSyms.find(name);
-                if (it != externSyms.end()) return it->second;
+                if (it != externSyms.end()) {
+                    return it->second;
+                }
                 RcuSymbol s;
                 s.name = name;
                 s.typeName = dll;
@@ -1348,7 +1390,9 @@ namespace Rux {
             // low bits of a two's-complement product are width-independent, so
             // no libm/CRT dependency is needed on any backend.
             void EmitIntPowHelper() {
-                if (ipowSym == ~0u) return;
+                if (ipowSym == ~0u) {
+                    return;
+                }
                 symbols[ipowSym].value = enc.Size();
                 // clang-format off
                 static constexpr std::uint8_t kThunk[] = {
@@ -1371,13 +1415,16 @@ namespace Rux {
                     0xC3,                                     // ret
                 };
                 // clang-format on
-                for (const std::uint8_t b : kThunk)
+                for (const std::uint8_t b : kThunk) {
                     enc.Byte(b);
+                }
             }
 
             void PredeclareFunctions() {
                 for (const auto& func : mod.funcs) {
-                    if (func.isExtern || funcSyms.contains(func.name)) continue;
+                    if (func.isExtern || funcSyms.contains(func.name)) {
+                        continue;
+                    }
                     RcuSymbol sym;
                     sym.name = func.name;
                     sym.sectionIdx = RCU_TEXT_IDX;
@@ -1391,17 +1438,21 @@ namespace Rux {
 
             // Align rodataData_ to `align` bytes (zero-fill), return current offset.
             uint32_t AlignRodata(int align) {
-                while (rodataData.size() % align)
+                while (rodataData.size() % align) {
                     rodataData.push_back(0);
+                }
                 return static_cast<uint32_t>(rodataData.size());
             }
 
             uint32_t InternStr(const std::string& val) {
                 auto it = strSyms.find(val);
-                if (it != strSyms.end()) return it->second;
+                if (it != strSyms.end()) {
+                    return it->second;
+                }
                 auto off = static_cast<uint32_t>(rodataData.size());
-                for (unsigned char c : val)
+                for (unsigned char c : val) {
                     rodataData.push_back(c);
+                }
                 rodataData.push_back(0);
                 std::string lbl = std::format("__str{}", constIdx++);
                 RcuSymbol s;
@@ -1418,7 +1469,9 @@ namespace Rux {
 
             uint32_t InternF32(const std::string& val) {
                 auto it = f32Syms.find(val);
-                if (it != f32Syms.end()) return it->second;
+                if (it != f32Syms.end()) {
+                    return it->second;
+                }
                 uint32_t off = AlignRodata(4);
                 float fv = std::stof(val);
                 uint32_t bits;
@@ -1442,7 +1495,9 @@ namespace Rux {
 
             uint32_t InternF64(const std::string& val) {
                 auto it = f64Syms.find(val);
-                if (it != f64Syms.end()) return it->second;
+                if (it != f64Syms.end()) {
+                    return it->second;
+                }
                 uint32_t off = AlignRodata(8);
                 double dv = std::stod(val);
                 uint64_t bits;
@@ -1465,7 +1520,9 @@ namespace Rux {
             }
 
             uint32_t InternF32SignMask() {
-                if (f32SignMaskSym != ~0u) return f32SignMaskSym;
+                if (f32SignMaskSym != ~0u) {
+                    return f32SignMaskSym;
+                }
                 uint32_t off = AlignRodata(4);
                 // 0x80000000 — sign bit of f32
                 rodataData.push_back(0x00);
@@ -1484,11 +1541,14 @@ namespace Rux {
             }
 
             uint32_t InternF64SignMask() {
-                if (f64SignMaskSym != ~0u) return f64SignMaskSym;
+                if (f64SignMaskSym != ~0u) {
+                    return f64SignMaskSym;
+                }
                 uint32_t off = AlignRodata(8);
                 // 0x8000000000000000 — sign bit of f64
-                for (int i = 0; i < 7; ++i)
+                for (int i = 0; i < 7; ++i) {
                     rodataData.push_back(0x00);
+                }
                 rodataData.push_back(0x80);
                 RcuSymbol s;
                 s.name = "__f64_sign_mask";
@@ -1531,29 +1591,37 @@ namespace Rux {
                     enc.Byte(0xD2); // mov rdx, r10
                 }
                 else if (IsFloat(t)) {
-                    if (t.kind == TypeRef::Kind::Float32)
+                    if (t.kind == TypeRef::Kind::Float32) {
                         enc.MovssXmm0Load(d);
-                    else
+                    }
+                    else {
                         enc.MovsdXmm0Load(d);
+                    }
                 }
                 else if (sz == 8 || sz == 0) {
                     enc.MovRaxLoad(d);
                 }
                 else if (t.IsSigned()) {
-                    if (sz == 4)
+                    if (sz == 4) {
                         enc.MovsxdRaxDword(d);
-                    else if (sz == 2)
+                    }
+                    else if (sz == 2) {
                         enc.MovsxRaxWord(d);
-                    else
+                    }
+                    else {
                         enc.MovsxRaxByte(d);
+                    }
                 }
                 else {
-                    if (sz == 4)
+                    if (sz == 4) {
                         enc.MovEaxLoad(d);
-                    else if (sz == 2)
+                    }
+                    else if (sz == 2) {
                         enc.MovzxRaxWord(d);
-                    else
+                    }
+                    else {
                         enc.MovzxRaxByte(d);
+                    }
                 }
             }
 
@@ -1561,29 +1629,37 @@ namespace Rux {
                 int sz = SizeOf(t);
                 int32_t d = Disp(reg);
                 if (IsFloat(t)) {
-                    if (t.kind == TypeRef::Kind::Float32)
+                    if (t.kind == TypeRef::Kind::Float32) {
                         enc.MovssXmm1Load(d);
-                    else
+                    }
+                    else {
                         enc.MovsdXmm1Load(d);
+                    }
                 }
                 else if (sz == 8 || sz == 0) {
                     enc.MovR10Load(d);
                 }
                 else if (t.IsSigned()) {
-                    if (sz == 4)
+                    if (sz == 4) {
                         enc.MovsxdR10Dword(d);
-                    else if (sz == 2)
+                    }
+                    else if (sz == 2) {
                         enc.MovsxR10Word(d);
-                    else
+                    }
+                    else {
                         enc.MovsxR10Byte(d);
+                    }
                 }
                 else {
-                    if (sz == 4)
+                    if (sz == 4) {
                         enc.MovR10dLoad(d);
-                    else if (sz == 2)
+                    }
+                    else if (sz == 2) {
                         enc.MovzxR10Word(d);
-                    else
+                    }
+                    else {
                         enc.MovzxR10Byte(d);
+                    }
                 }
             }
 
@@ -1599,21 +1675,27 @@ namespace Rux {
                     enc.Dword(static_cast<uint32_t>(d + 8)); // mov [rbp+disp+8], rdx
                 }
                 else if (IsFloat(t)) {
-                    if (t.kind == TypeRef::Kind::Float32)
+                    if (t.kind == TypeRef::Kind::Float32) {
                         enc.MovssXmm0Store(d);
-                    else
+                    }
+                    else {
                         enc.MovsdXmm0Store(d);
+                    }
                 }
                 else {
                     int ss = (sz > 0) ? sz : 8;
-                    if (ss == 8)
+                    if (ss == 8) {
                         enc.MovRaxStore(d);
-                    else if (ss == 4)
+                    }
+                    else if (ss == 4) {
                         enc.MovEaxStore(d);
-                    else if (ss == 2)
+                    }
+                    else if (ss == 2) {
                         enc.MovAxStore(d);
-                    else
+                    }
+                    else {
                         enc.MovAlStore(d);
+                    }
                 }
             }
 
@@ -1664,16 +1746,26 @@ namespace Rux {
             // Struct field lookup
             int FieldOffset(LirReg base, const std::string& fieldName) {
                 auto typeIt = regTypes.find(base);
-                if (typeIt == regTypes.end()) return 0;
+                if (typeIt == regTypes.end()) {
+                    return 0;
+                }
                 const TypeRef& pt = typeIt->second;
-                if (pt.kind != TypeRef::Kind::Pointer || pt.inner.empty()) return 0;
+                if (pt.kind != TypeRef::Kind::Pointer || pt.inner.empty()) {
+                    return 0;
+                }
                 const TypeRef& inner = pt.inner[0];
                 if (inner.kind == TypeRef::Kind::Range) {
                     const TypeRef& elemType = inner.inner.empty() ? TypeRef::MakeInt64() : inner.inner[0];
                     int elemSize = SizeOf(elemType);
-                    if (fieldName == "lo") return 0;
-                    if (fieldName == "hi") return elemSize;
-                    if (fieldName == "inclusive") return 2 * elemSize;
+                    if (fieldName == "lo") {
+                        return 0;
+                    }
+                    if (fieldName == "hi") {
+                        return elemSize;
+                    }
+                    if (fieldName == "inclusive") {
+                        return 2 * elemSize;
+                    }
                     return 0;
                 }
                 if (inner.kind == TypeRef::Kind::Tuple) {
@@ -1685,40 +1777,63 @@ namespace Rux {
                         return 0;
                     }
                     int offset = 0;
-                    if (idx >= inner.inner.size()) return 0;
+                    if (idx >= inner.inner.size()) {
+                        return 0;
+                    }
                     for (std::size_t i = 0; i < idx && i < inner.inner.size(); ++i) {
                         const int sz = SizeOf(inner.inner[i]);
                         const int al = sz > 0 ? std::min(sz, 8) : 1;
-                        if (al > 1) offset = AlignUp(offset, al);
+                        if (al > 1) {
+                            offset = AlignUp(offset, al);
+                        }
                         offset += sz > 0 ? sz : 8;
                     }
                     const int fieldSize = SizeOf(inner.inner[idx]);
                     const int fieldAlign = fieldSize > 0 ? std::min(fieldSize, 8) : 1;
-                    if (fieldAlign > 1) offset = AlignUp(offset, fieldAlign);
+                    if (fieldAlign > 1) {
+                        offset = AlignUp(offset, fieldAlign);
+                    }
                     return offset;
                 }
-                if (inner.kind != TypeRef::Kind::Named) return 0;
+                if (inner.kind != TypeRef::Kind::Named) {
+                    return 0;
+                }
                 const std::string baseName = BaseTypeName(inner.name);
                 if (interfaceNames.count(baseName)) {
-                    if (fieldName == "data") return 0;
-                    if (fieldName == "vtable") return 8;
+                    if (fieldName == "data") {
+                        return 0;
+                    }
+                    if (fieldName == "vtable") {
+                        return 8;
+                    }
                     return 0;
                 }
                 if (baseName == "Slice") {
-                    if (fieldName == "data") return 0;
-                    if (fieldName == "length") return 8;
+                    if (fieldName == "data") {
+                        return 0;
+                    }
+                    if (fieldName == "length") {
+                        return 8;
+                    }
                     return 0;
                 }
                 auto layIt = layouts.find(baseName);
-                if (layIt == layouts.end()) return 0;
-                for (const auto& field : layIt->second.fields)
-                    if (field.name == fieldName) return field.offset;
+                if (layIt == layouts.end()) {
+                    return 0;
+                }
+                for (const auto& field : layIt->second.fields) {
+                    if (field.name == fieldName) {
+                        return field.offset;
+                    }
+                }
                 return 0;
             }
 
             // Pre-pass: allocate stack slots
             int32_t AllocSlot(LirReg reg, int bytes) {
-                if (auto it = slotMap.find(reg); it != slotMap.end()) return it->second;
+                if (auto it = slotMap.find(reg); it != slotMap.end()) {
+                    return it->second;
+                }
                 int al = (bytes > 0) ? std::min(bytes, 8) : 1;
                 nextOff = AlignUp(nextOff, al);
                 nextOff += (bytes > 0 ? bytes : 8);
@@ -1753,10 +1868,13 @@ namespace Rux {
                 for (uint32_t bi = 0; bi < func.blocks.size(); ++bi) {
                     for (const auto& instr : func.blocks[bi].instrs) {
                         if (instr.op == LirOpcode::Phi) {
-                            for (const auto& [src, pred] : instr.phiPreds)
+                            for (const auto& [src, pred] : instr.phiPreds) {
                                 phiMoves[pred][bi].push_back({instr.dst, src, instr.type});
+                            }
                         }
-                        if (instr.dst == LirNoReg) continue;
+                        if (instr.dst == LirNoReg) {
+                            continue;
+                        }
                         if (instr.op == LirOpcode::Alloca) {
                             AllocSlot(instr.dst, 8);
                             int dsz;
@@ -1786,13 +1904,16 @@ namespace Rux {
                 }
 
                 frameSize = AlignUp(nextOff, 16);
-                if (frameSize == 0) frameSize = 16;
+                if (frameSize == 0) {
+                    frameSize = 16;
+                }
             }
 
             // Build struct layouts
             void BuildLayouts() {
-                for (const auto& name : packageInterfaceNames)
+                for (const auto& name : packageInterfaceNames) {
                     interfaceNames.insert(name);
+                }
                 for (const auto& s : structDecls) {
                     StructLayout layout;
                     int offset = 0, maxAlign = 1;
@@ -1806,7 +1927,9 @@ namespace Rux {
                                 al = it->second.alignment;
                             }
                         }
-                        if (al > 1) offset = AlignUp(offset, al);
+                        if (al > 1) {
+                            offset = AlignUp(offset, al);
+                        }
                         layout.fields.push_back({f.name, offset, sz});
                         offset += (sz > 0 ? sz : 8);
                         maxAlign = std::max(maxAlign, al);
@@ -1820,17 +1943,25 @@ namespace Rux {
             // Phi move emission
             bool HasPhiMoves(const uint32_t from, uint32_t to) const {
                 auto it = phiMoves.find(from);
-                if (it == phiMoves.end()) return false;
+                if (it == phiMoves.end()) {
+                    return false;
+                }
                 return it->second.contains(to);
             }
 
             void EmitPhiMoves(const uint32_t from, uint32_t to) {
                 auto it1 = phiMoves.find(from);
-                if (it1 == phiMoves.end()) return;
+                if (it1 == phiMoves.end()) {
+                    return;
+                }
                 auto it2 = it1->second.find(to);
-                if (it2 == it1->second.end()) return;
+                if (it2 == it1->second.end()) {
+                    return;
+                }
                 for (const auto& m : it2->second) {
-                    if (!slotMap.contains(m.src)) continue;
+                    if (!slotMap.contains(m.src)) {
+                        continue;
+                    }
                     LoadA(m.src, m.type);
                     StoreA(m.dst, m.type);
                 }
@@ -1845,7 +1976,9 @@ namespace Rux {
                 }
                 if (bytes > 0) {
                     enc.SubRspImm32(bytes);
-                    if (bytes == kPageSize) enc.TouchRsp();
+                    if (bytes == kPageSize) {
+                        enc.TouchRsp();
+                    }
                 }
             }
 
@@ -1863,10 +1996,12 @@ namespace Rux {
                             const int32_t stackArgOff = 32 + (idx - 4) * 8;
                             if (IsFloat(at)) {
                                 LoadA(arg, at);
-                                if (SizeOf(at) == 4)
+                                if (SizeOf(at) == 4) {
                                     enc.MovssXmm0StoreRsp(stackArgOff);
-                                else
+                                }
+                                else {
                                     enc.MovsdXmm0StoreRsp(stackArgOff);
+                                }
                             }
                             else if (IsWin64ByRefAggregate(at)) {
                                 enc.LeaRaxStack(d);
@@ -1882,10 +2017,12 @@ namespace Rux {
 
                         if (IsFloat(at)) {
                             int sz = SizeOf(at);
-                            if (sz == 4)
+                            if (sz == 4) {
                                 enc.MovssXmmNLoad(idx, d);
-                            else
+                            }
+                            else {
                                 enc.MovsdXmmNLoad(idx, d);
+                            }
                         }
                         else if (IsWin64ByRefAggregate(at)) {
                             enc.LeaArgStackWin64(idx, d);
@@ -1908,10 +2045,12 @@ namespace Rux {
                         if (IsFloat(at)) {
                             if (fltIdx < 8) {
                                 int sz = SizeOf(at);
-                                if (sz == 4)
+                                if (sz == 4) {
                                     enc.MovssXmmNLoad(fltIdx, d);
-                                else
+                                }
+                                else {
                                     enc.MovsdXmmNLoad(fltIdx, d);
+                                }
                                 ++fltIdx;
                             }
                         }
@@ -1929,7 +2068,9 @@ namespace Rux {
             void GenInstr(const LirInstr& instr) {
                 switch (instr.op) {
                 case LirOpcode::Const: {
-                    if (instr.dst == LirNoReg) break;
+                    if (instr.dst == LirNoReg) {
+                        break;
+                    }
                     const TypeRef& t = instr.type;
                     int sz = SizeOf(t);
                     if (t.kind == TypeRef::Kind::Str) {
@@ -1960,10 +2101,12 @@ namespace Rux {
                     else {
                         const std::string& sv = instr.strArg.empty() ? "0" : instr.strArg;
                         const std::uint64_t bits = ParseIntegerLiteralBits(sv).value_or(0);
-                        if (bits <= 0x7FFFFFFF)
+                        if (bits <= 0x7FFFFFFF) {
                             enc.MovEaxImm32(static_cast<int32_t>(bits));
-                        else
+                        }
+                        else {
                             enc.MovRaxImm64(static_cast<std::int64_t>(bits));
+                        }
                         StoreA(instr.dst, sz > 0 ? t : TypeRef::MakeInt64());
                     }
                     break;
@@ -2144,38 +2287,49 @@ namespace Rux {
                         LoadB(instr.srcs[1], t);
                         const bool f32 = (t.kind == TypeRef::Kind::Float32);
                         if (instr.op == LirOpcode::Add) {
-                            if (f32)
+                            if (f32) {
                                 enc.AddssXmm01();
-                            else
+                            }
+                            else {
                                 enc.AddsdXmm01();
+                            }
                         }
                         else if (instr.op == LirOpcode::Sub) {
-                            if (f32)
+                            if (f32) {
                                 enc.SubssXmm01();
-                            else
+                            }
+                            else {
                                 enc.SubsdXmm01();
+                            }
                         }
                         else {
-                            if (f32)
+                            if (f32) {
                                 enc.AddssXmm01();
-                            else
+                            }
+                            else {
                                 enc.AddsdXmm01();
+                            }
                         } // bitwise on float: fallback
                         StoreA(instr.dst, t);
                     }
                     else {
                         LoadA(instr.srcs[0], t);
                         LoadB(instr.srcs[1], t);
-                        if (instr.op == LirOpcode::Add)
+                        if (instr.op == LirOpcode::Add) {
                             enc.AddRaxR10();
-                        else if (instr.op == LirOpcode::Sub)
+                        }
+                        else if (instr.op == LirOpcode::Sub) {
                             enc.SubRaxR10();
-                        else if (instr.op == LirOpcode::And)
+                        }
+                        else if (instr.op == LirOpcode::And) {
                             enc.AndRaxR10();
-                        else if (instr.op == LirOpcode::Or)
+                        }
+                        else if (instr.op == LirOpcode::Or) {
                             enc.OrRaxR10();
-                        else
+                        }
+                        else {
                             enc.XorRaxR10();
+                        }
                         StoreA(instr.dst, t);
                     }
                     break;
@@ -2185,10 +2339,12 @@ namespace Rux {
                     if (IsFloat(t)) {
                         LoadA(instr.srcs[0], t);
                         LoadB(instr.srcs[1], t);
-                        if (t.kind == TypeRef::Kind::Float32)
+                        if (t.kind == TypeRef::Kind::Float32) {
                             enc.MulssXmm01();
-                        else
+                        }
+                        else {
                             enc.MulsdXmm01();
+                        }
                     }
                     else {
                         LoadA(instr.srcs[0], t);
@@ -2203,10 +2359,12 @@ namespace Rux {
                     if (const TypeRef& t = instr.type; IsFloat(t)) {
                         LoadA(instr.srcs[0], t);
                         LoadB(instr.srcs[1], t);
-                        if (t.kind == TypeRef::Kind::Float32)
+                        if (t.kind == TypeRef::Kind::Float32) {
                             enc.DivssXmm01();
-                        else
+                        }
+                        else {
                             enc.DivsdXmm01();
+                        }
                         StoreA(instr.dst, t);
                     }
                     else {
@@ -2220,7 +2378,9 @@ namespace Rux {
                             enc.XorRdxRdx();
                             enc.DivR10();
                         }
-                        if (instr.op == LirOpcode::Mod) enc.MovRaxRdx();
+                        if (instr.op == LirOpcode::Mod) {
+                            enc.MovRaxRdx();
+                        }
                         StoreA(instr.dst, t);
                     }
                     break;
@@ -2257,12 +2417,15 @@ namespace Rux {
                     enc.MovR11Load(Disp(instr.srcs[1]));
                     enc.MovRcxR11();
                     bool isShr = (instr.op == LirOpcode::Shr);
-                    if (isShr && t.IsSigned())
+                    if (isShr && t.IsSigned()) {
                         enc.SarRaxCl();
-                    else if (isShr)
+                    }
+                    else if (isShr) {
                         enc.ShrRaxCl();
-                    else
+                    }
+                    else {
                         enc.ShlRaxCl();
+                    }
                     StoreA(instr.dst, t);
                     break;
                 }
@@ -2274,15 +2437,19 @@ namespace Rux {
                         const bool f32 = (t.kind == TypeRef::Kind::Float32);
                         const uint32_t maskSym = f32 ? InternF32SignMask() : InternF64SignMask();
                         uint32_t ro;
-                        if (f32)
+                        if (f32) {
                             enc.MovssXmm1Rip(ro);
-                        else
+                        }
+                        else {
                             enc.MovsdXmm1Rip(ro);
+                        }
                         AddTextReloc(ro, maskSym);
-                        if (f32)
+                        if (f32) {
                             enc.XorpsXmm01();
-                        else
+                        }
+                        else {
                             enc.XorpdXmm01();
+                        }
                         StoreA(instr.dst, t);
                     }
                     else {
@@ -2328,10 +2495,12 @@ namespace Rux {
                     LoadA(instr.srcs[0], lhsT);
                     LoadB(instr.srcs[1], lhsT);
                     if (IsFloat(lhsT)) {
-                        if (lhsT.kind == TypeRef::Kind::Float32)
+                        if (lhsT.kind == TypeRef::Kind::Float32) {
                             enc.UcomissXmm01();
-                        else
+                        }
+                        else {
                             enc.UcomisdXmm01();
+                        }
                         switch (instr.op) {
                         case LirOpcode::CmpEq:
                             enc.SeteAl();
@@ -2387,22 +2556,28 @@ namespace Rux {
                     LoadA(instr.srcs[0], srcT);
                     bool srcFl = IsFloat(srcT), dstFl = IsFloat(dstT);
                     if (srcFl && !dstFl) {
-                        if (srcT.kind == TypeRef::Kind::Float32)
+                        if (srcT.kind == TypeRef::Kind::Float32) {
                             enc.CvttsssiRaxXmm0();
-                        else
+                        }
+                        else {
                             enc.CvttsdsiRaxXmm0();
+                        }
                     }
                     else if (!srcFl && dstFl) {
-                        if (dstT.kind == TypeRef::Kind::Float32)
+                        if (dstT.kind == TypeRef::Kind::Float32) {
                             enc.Cvtsi2ssXmm0Rax();
-                        else
+                        }
+                        else {
                             enc.Cvtsi2sdXmm0Rax();
+                        }
                     }
                     else if (srcFl && dstFl) {
-                        if (srcT.kind == TypeRef::Kind::Float32 && dstT.kind == TypeRef::Kind::Float64)
+                        if (srcT.kind == TypeRef::Kind::Float32 && dstT.kind == TypeRef::Kind::Float64) {
                             enc.CvtsssdXmm0();
-                        else if (srcT.kind == TypeRef::Kind::Float64 && dstT.kind == TypeRef::Kind::Float32)
+                        }
+                        else if (srcT.kind == TypeRef::Kind::Float64 && dstT.kind == TypeRef::Kind::Float32) {
                             enc.CvtsdssXmm0();
+                        }
                     }
                     StoreA(instr.dst, dstT);
                     break;
@@ -2412,7 +2587,9 @@ namespace Rux {
                     const bool hiddenReturn = win64Call && instr.dst != LirNoReg && IsWin64ByRefAggregate(instr.type);
                     const int callFrameSize =
                         win64Call ? Win64CallFrameSize(instr.srcs.size() + (hiddenReturn ? 1 : 0)) : 0;
-                    if (win64Call) enc.SubRspImm32(callFrameSize);
+                    if (win64Call) {
+                        enc.SubRspImm32(callFrameSize);
+                    }
                     if (hiddenReturn) {
                         enc.LeaArgStackWin64(0, Disp(instr.dst));
                         EmitCallArgs(instr.srcs, instr.callConv, 1);
@@ -2421,26 +2598,35 @@ namespace Rux {
                         EmitCallArgs(instr.srcs, instr.callConv);
                     }
                     uint32_t symIdx;
-                    if (const auto it = funcSyms.find(instr.strArg); it != funcSyms.end())
+                    if (const auto it = funcSyms.find(instr.strArg); it != funcSyms.end()) {
                         symIdx = it->second;
-                    else
+                    }
+                    else {
                         symIdx = GetOrAddExtern(instr.strArg, RcuSymKind::ExternFunc);
+                    }
                     uint32_t ro;
                     enc.Call(ro);
                     AddTextReloc(ro, symIdx);
-                    if (win64Call) enc.AddRspImm32(callFrameSize);
-                    if (instr.dst != LirNoReg && !instr.type.IsOpaque() && !hiddenReturn)
+                    if (win64Call) {
+                        enc.AddRspImm32(callFrameSize);
+                    }
+                    if (instr.dst != LirNoReg && !instr.type.IsOpaque() && !hiddenReturn) {
                         StoreReturnValue(instr.dst, instr.type);
+                    }
                     break;
                 }
                 case LirOpcode::CallIndirect: {
-                    if (instr.srcs.empty()) break;
+                    if (instr.srcs.empty()) {
+                        break;
+                    }
                     LirReg callee = instr.srcs[0];
                     std::vector<LirReg> args(instr.srcs.begin() + 1, instr.srcs.end());
                     bool win64Call = EffectiveConv(instr.callConv) == CallingConvention::Win64;
                     const bool hiddenReturn = win64Call && instr.dst != LirNoReg && IsWin64ByRefAggregate(instr.type);
                     const int callFrameSize = win64Call ? Win64CallFrameSize(args.size() + (hiddenReturn ? 1 : 0)) : 0;
-                    if (win64Call) enc.SubRspImm32(callFrameSize);
+                    if (win64Call) {
+                        enc.SubRspImm32(callFrameSize);
+                    }
                     if (hiddenReturn) {
                         enc.LeaArgStackWin64(0, Disp(instr.dst));
                         EmitCallArgs(args, instr.callConv, 1);
@@ -2450,19 +2636,25 @@ namespace Rux {
                     }
                     enc.MovR10Load(Disp(callee));
                     enc.CallR10();
-                    if (win64Call) enc.AddRspImm32(callFrameSize);
-                    if (instr.dst != LirNoReg && !instr.type.IsOpaque() && !hiddenReturn)
+                    if (win64Call) {
+                        enc.AddRspImm32(callFrameSize);
+                    }
+                    if (instr.dst != LirNoReg && !instr.type.IsOpaque() && !hiddenReturn) {
                         StoreReturnValue(instr.dst, instr.type);
+                    }
                     break;
                 }
                 case LirOpcode::GlobalAddr: {
                     uint32_t symIdx;
-                    if (const auto dataIt = dataSyms.find(instr.strArg); dataIt != dataSyms.end())
+                    if (const auto dataIt = dataSyms.find(instr.strArg); dataIt != dataSyms.end()) {
                         symIdx = dataIt->second;
-                    else if (const auto funcIt = funcSyms.find(instr.strArg); funcIt != funcSyms.end())
+                    }
+                    else if (const auto funcIt = funcSyms.find(instr.strArg); funcIt != funcSyms.end()) {
                         symIdx = funcIt->second;
-                    else
+                    }
+                    else {
                         symIdx = GetOrAddExtern(instr.strArg, RcuSymKind::ExternData);
+                    }
                     uint32_t relocOff;
                     enc.LeaRaxRip(relocOff);
                     AddTextReloc(relocOff, symIdx);
@@ -2473,7 +2665,9 @@ namespace Rux {
                     LirReg base = instr.srcs[0];
                     enc.MovRaxLoad(Disp(base));
                     int off = FieldOffset(base, instr.strArg);
-                    if (off != 0) enc.LeaRaxRaxDisp(off);
+                    if (off != 0) {
+                        enc.LeaRaxRaxDisp(off);
+                    }
                     enc.MovRaxStore(Disp(instr.dst));
                     break;
                 }
@@ -2483,7 +2677,9 @@ namespace Rux {
                     int elemSz = (instr.type.kind == TypeRef::Kind::Pointer && !instr.type.inner.empty())
                         ? SizeOfRuntime(instr.type.inner[0])
                         : 8;
-                    if (elemSz < 1) elemSz = 1;
+                    if (elemSz < 1) {
+                        elemSz = 1;
+                    }
                     enc.MovRaxLoad(Disp(base));
                     LoadB(idx, regTypes.at(idx));
                     enc.ImulR11R10Imm32(elemSz);
@@ -2515,14 +2711,18 @@ namespace Rux {
                         const TypeRef condT =
                             regTypes.contains(term.cond) ? regTypes.at(term.cond) : TypeRef::MakeBool();
                         const int condSz = SizeOf(condT);
-                        if (condSz <= 1)
+                        if (condSz <= 1) {
                             enc.MovzxRaxByte(Disp(term.cond));
-                        else if (condSz == 2)
+                        }
+                        else if (condSz == 2) {
                             enc.MovzxRaxWord(Disp(term.cond));
-                        else if (condSz == 4)
+                        }
+                        else if (condSz == 4) {
                             enc.MovEaxLoad(Disp(term.cond));
-                        else
+                        }
+                        else {
                             enc.MovRaxLoad(Disp(term.cond));
+                        }
                     }
                     enc.TestRaxRax();
                     const bool truePhi = HasPhiMoves(blockIdx, term.trueTarget);
@@ -2554,10 +2754,12 @@ namespace Rux {
                 }
                 case LirTermKind::Return: {
                     if (term.retVal && *term.retVal != LirNoReg) {
-                        if (hiddenReturnOff != 0 && IsWin64ByRefAggregate(term.retType))
+                        if (hiddenReturnOff != 0 && IsWin64ByRefAggregate(term.retType)) {
                             StoreHiddenReturnValue(*term.retVal, term.retType);
-                        else
+                        }
+                        else {
                             LoadReturnValue(*term.retVal, term.retType);
+                        }
                     }
                     enc.Leave();
                     enc.Ret();
@@ -2598,10 +2800,12 @@ namespace Rux {
                 sym.kind = RcuSymKind::Func;
                 sym.visibility = func.isPublic ? RcuSymVis::Global : RcuSymVis::Local;
                 sym.typeName = func.returnType.ToString();
-                if (const auto it = funcSyms.find(func.name); it != funcSyms.end())
+                if (const auto it = funcSyms.find(func.name); it != funcSyms.end()) {
                     symbols[it->second] = std::move(sym);
-                else
+                }
+                else {
                     funcSyms[func.name] = AddSymbol(std::move(sym));
+                }
                 // Prologue
                 enc.PushRbp();
                 enc.MovRbpRsp();
@@ -2709,9 +2913,12 @@ namespace Rux {
                 for (uint32_t bi = 0; bi < func.blocks.size(); ++bi) {
                     blockOffsets[bi] = enc.Size();
                     const auto& block = func.blocks[bi];
-                    for (const auto& instr : block.instrs)
+                    for (const auto& instr : block.instrs) {
                         GenInstr(instr);
-                    if (block.term) GenTerm(bi, *block.term, func);
+                    }
+                    if (block.term) {
+                        GenTerm(bi, *block.term, func);
+                    }
                 }
                 PatchJumps();
                 // Update symbol size
@@ -2740,14 +2947,17 @@ namespace Rux {
 
                     for (const auto& method : vt.methods) {
                         const uint32_t slotOff = static_cast<uint32_t>(rodataData.size());
-                        for (int i = 0; i < 8; ++i)
+                        for (int i = 0; i < 8; ++i) {
                             rodataData.push_back(0);
+                        }
 
                         uint32_t methodSym;
-                        if (const auto it = funcSyms.find(method); it != funcSyms.end())
+                        if (const auto it = funcSyms.find(method); it != funcSyms.end()) {
                             methodSym = it->second;
-                        else
+                        }
+                        else {
                             methodSym = GetOrAddExtern(method, RcuSymKind::ExternFunc);
+                        }
                         AddRodataReloc(slotOff, methodSym, RcuRelType::Abs64);
                     }
                 }
@@ -2757,8 +2967,9 @@ namespace Rux {
                 BuildLayouts();
                 PredeclareFunctions();
                 // Extern vars
-                for (const auto& ev : mod.externVars)
+                for (const auto& ev : mod.externVars) {
                     GetOrAddExtern(ev.name, RcuSymKind::ExternData);
+                }
                 // Module constants → .data symbols
                 for (const auto& c : mod.consts) {
                     RcuSymbol s;
@@ -2769,15 +2980,17 @@ namespace Rux {
                     s.visibility = c.isPublic ? RcuSymVis::Global : RcuSymVis::Local;
                     s.typeName = c.type.ToString();
                     // Emit 8 placeholder bytes in .data
-                    for (int i = 0; i < 8; ++i)
+                    for (int i = 0; i < 8; ++i) {
                         dataData.push_back(0);
+                    }
                     s.size = 8;
                     AddSymbol(s);
                 }
                 EmitVtables();
                 // Functions
-                for (const auto& func : mod.funcs)
+                for (const auto& func : mod.funcs) {
                     GenFunc(func);
+                }
                 // Runtime helpers referenced by the generated code, emitted once.
                 EmitIntPowHelper();
             }
@@ -2797,8 +3010,9 @@ namespace Rux {
                 std::string ver = RUX_VERSION;
                 unsigned M = 0, mi = 0, p = 0;
                 auto parseNum = [](const char* s, unsigned& out) -> const char* {
-                    while (*s && (*s < '0' || *s > '9'))
+                    while (*s && (*s < '0' || *s > '9')) {
                         ++s;
+                    }
                     while (*s >= '0' && *s <= '9') {
                         out = out * 10 + static_cast<unsigned>(*s - '0');
                         ++s;
@@ -2855,11 +3069,14 @@ namespace Rux {
         bool Crc32cReady = false;
 
         void InitCrc32c() {
-            if (Crc32cReady) return;
+            if (Crc32cReady) {
+                return;
+            }
             for (uint32_t i = 0; i < 256; ++i) {
                 uint32_t c = i;
-                for (int k = 0; k < 8; ++k)
+                for (int k = 0; k < 8; ++k) {
                     c = (c & 1) ? (0x82F63B78u ^ (c >> 1)) : (c >> 1);
+                }
                 Crc32cTable[i] = c;
             }
             Crc32cReady = true;
@@ -2868,8 +3085,9 @@ namespace Rux {
         uint32_t Crc32c(const std::vector<uint8_t>& data) {
             InitCrc32c();
             uint32_t crc = 0xFFFFFFFFu;
-            for (uint8_t b : data)
+            for (uint8_t b : data) {
                 crc = Crc32cTable[(crc ^ b) & 0xFF] ^ (crc >> 8);
+            }
             return crc ^ 0xFFFFFFFFu;
         }
 
@@ -2897,8 +3115,9 @@ namespace Rux {
                     st_.Intern(s.name);
                     st_.Intern(s.typeName);
                 }
-                for (const auto& sec : f_.sections)
+                for (const auto& sec : f_.sections) {
                     st_.Intern(sec.name);
+                }
             }
 
             static void AppendU8(std::vector<uint8_t>& buf, uint8_t v) {
@@ -2936,8 +3155,9 @@ namespace Rux {
             }
 
             static void AlignTo(std::vector<uint8_t>& buf, int a) {
-                while (buf.size() % a)
+                while (buf.size() % a) {
                     buf.push_back(0);
+                }
             }
 
             std::vector<uint8_t> Build() {
@@ -2984,10 +3204,12 @@ namespace Rux {
                     const auto& sec = f_.sections[i];
                     // name[8]
                     char name8[8] = {};
-                    for (int j = 0; j < 7 && j < static_cast<int>(sec.name.size()); ++j)
+                    for (int j = 0; j < 7 && j < static_cast<int>(sec.name.size()); ++j) {
                         name8[j] = sec.name[j];
-                    for (char c : name8)
+                    }
+                    for (char c : name8) {
                         AppendU8(out, static_cast<uint8_t>(c));
+                    }
                     AppendU32(out, sec.type);
                     AppendU32(out, sec.flags);
                     secRawOffPatches[i] = static_cast<uint32_t>(out.size());
@@ -3036,8 +3258,9 @@ namespace Rux {
                 Patch32At(out, stOffPatch, static_cast<uint32_t>(out.size()));
                 Patch32At(out, stSizePatch, st_.Size());
                 const char* stData = st_.Data();
-                for (uint32_t i = 0; i < st_.Size(); ++i)
+                for (uint32_t i = 0; i < st_.Size(); ++i) {
                     out.push_back(static_cast<uint8_t>(stData[i]));
+                }
 
                 // Rux Metadata (64 bytes, 8-byte aligned)
                 if (f_.hasMetadata) {
@@ -3048,14 +3271,15 @@ namespace Rux {
                     out.push_back(0x45);
                     out.push_back(0x54);
                     out.push_back(0x41);
-                    AppendU32(out, 64); // block_size
-                    AppendU32(out, st_.Intern(f_.sourcePath)); // source_path_off
+                    AppendU32(out, 64);                         // block_size
+                    AppendU32(out, st_.Intern(f_.sourcePath));  // source_path_off
                     AppendU32(out, st_.Intern(f_.packageName)); // package_name_off
                     AppendU64(out, f_.buildTimestamp);
                     AppendU32(out, f_.ruxVersion);
                     AppendU32(out, f_.compilerFlags);
-                    for (uint8_t b : f_.sourceHash)
+                    for (uint8_t b : f_.sourceHash) {
                         AppendU8(out, b);
+                    }
                 }
 
                 // CRC-32C
@@ -3088,13 +3312,27 @@ namespace Rux {
                 for (size_t i = 0; i < f.sections.size(); ++i) {
                     const auto& s = f.sections[i];
                     std::string flags;
-                    if (s.flags & RcuSecFlag::Alloc) flags += 'A';
-                    if (s.flags & RcuSecFlag::Exec) flags += 'E';
-                    if (s.flags & RcuSecFlag::Read) flags += 'R';
-                    if (s.flags & RcuSecFlag::Write) flags += 'W';
-                    if (s.flags & RcuSecFlag::Merge) flags += 'M';
-                    if (s.flags & RcuSecFlag::Strings) flags += 'S';
-                    if (flags.empty()) flags = "-";
+                    if (s.flags & RcuSecFlag::Alloc) {
+                        flags += 'A';
+                    }
+                    if (s.flags & RcuSecFlag::Exec) {
+                        flags += 'E';
+                    }
+                    if (s.flags & RcuSecFlag::Read) {
+                        flags += 'R';
+                    }
+                    if (s.flags & RcuSecFlag::Write) {
+                        flags += 'W';
+                    }
+                    if (s.flags & RcuSecFlag::Merge) {
+                        flags += 'M';
+                    }
+                    if (s.flags & RcuSecFlag::Strings) {
+                        flags += 'S';
+                    }
+                    if (flags.empty()) {
+                        flags = "-";
+                    }
                     out << std::format("  [{:2}]  {:<10}  flags:{:<5}  align:{:<4}  data:{}B  relocs:{}\n",
                                        i,
                                        s.name,
@@ -3110,14 +3348,18 @@ namespace Rux {
                 for (size_t i = 0; i < f.symbols.size(); ++i) {
                     const auto& s = f.symbols[i];
                     std::string secStr;
-                    if (s.sectionIdx == RCU_SEC_EXTERNAL)
+                    if (s.sectionIdx == RCU_SEC_EXTERNAL) {
                         secStr = "extern";
-                    else if (s.sectionIdx == RCU_SEC_ABSOLUTE)
+                    }
+                    else if (s.sectionIdx == RCU_SEC_ABSOLUTE) {
                         secStr = "abs";
-                    else if (s.sectionIdx < f.sections.size())
+                    }
+                    else if (s.sectionIdx < f.sections.size()) {
                         secStr = std::format("{}+0x{:04X}", f.sections[s.sectionIdx].name, s.value);
-                    else
+                    }
+                    else {
                         secStr = std::format("sec{}+0x{:04X}", s.sectionIdx, s.value);
+                    }
 
                     auto kindStr = "?";
                     switch (s.kind) {
@@ -3155,33 +3397,41 @@ namespace Rux {
                                        s.size,
                                        kindStr,
                                        visStr);
-                    if (!s.typeName.empty()) out << std::format("  \"{}\"", s.typeName);
+                    if (!s.typeName.empty()) {
+                        out << std::format("  \"{}\"", s.typeName);
+                    }
                     out << '\n';
                 }
                 out << '\n';
 
                 // Relocations
                 bool anyReloc = false;
-                for (const auto& sec : f.sections)
+                for (const auto& sec : f.sections) {
                     if (!sec.relocs.empty()) {
                         anyReloc = true;
                         break;
                     }
+                }
 
                 if (anyReloc) {
                     for (size_t si = 0; si < f.sections.size(); ++si) {
                         const auto& sec = f.sections[si];
-                        if (sec.relocs.empty()) continue;
+                        if (sec.relocs.empty()) {
+                            continue;
+                        }
                         out << std::format("Relocations ({}):\n", sec.name);
                         for (size_t i = 0; i < sec.relocs.size(); ++i) {
                             const auto& r = sec.relocs[i];
                             const char* rt = "?";
-                            if (r.type == RcuRelType::Abs64)
+                            if (r.type == RcuRelType::Abs64) {
                                 rt = "ABS_64";
-                            else if (r.type == RcuRelType::Abs32)
+                            }
+                            else if (r.type == RcuRelType::Abs32) {
                                 rt = "ABS_32";
-                            else if (r.type == RcuRelType::Rel32)
+                            }
+                            else if (r.type == RcuRelType::Rel32) {
                                 rt = "REL_32";
+                            }
                             std::string symName =
                                 r.symbolIndex < f.symbols.size() ? f.symbols[r.symbolIndex].name : "?";
                             out << std::format("  [{:3}]  off=0x{:04X}  sym[{}]={}  {}  addend={}\n",
@@ -3198,16 +3448,22 @@ namespace Rux {
 
                 // Hex dumps
                 for (const auto& sec : f.sections) {
-                    if (sec.data.empty()) continue;
+                    if (sec.data.empty()) {
+                        continue;
+                    }
                     out << std::format("{} ({} bytes):\n", sec.name, sec.data.size());
                     for (size_t i = 0; i < sec.data.size(); i += 16) {
                         out << std::format("  {:04X}  ", i);
                         for (size_t j = 0; j < 16; ++j) {
-                            if (i + j < sec.data.size())
+                            if (i + j < sec.data.size()) {
                                 out << std::format("{:02X} ", sec.data[i + j]);
-                            else
+                            }
+                            else {
                                 out << "   ";
-                            if (j == 7) out << ' ';
+                            }
+                            if (j == 7) {
+                                out << ' ';
+                            }
                         }
                         out << " |";
                         for (size_t j = 0; j < 16 && i + j < sec.data.size(); ++j) {
@@ -3236,10 +3492,12 @@ namespace Rux {
         std::vector<LirStructDecl> structDecls;
         std::vector<std::string> interfaceNames;
         for (const auto& mod : lir.modules) {
-            for (const auto& s : mod.structs)
+            for (const auto& s : mod.structs) {
                 structDecls.push_back(s);
-            for (const auto& name : mod.interfaceNames)
+            }
+            for (const auto& name : mod.interfaceNames) {
                 interfaceNames.push_back(name);
+            }
         }
         for (const auto& mod : lir.modules) {
             RcuCodeGen gen(mod, structDecls, interfaceNames, packageName);
@@ -3251,7 +3509,9 @@ namespace Rux {
     bool Rcu::Emit(const RcuFile& file, const std::filesystem::path& path) {
         auto bytes = RcuWriter::Serialize(file);
         std::ofstream f(path, std::ios::binary | std::ios::trunc);
-        if (!f) return false;
+        if (!f) {
+            return false;
+        }
         f.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
         return f.good();
     }
@@ -3259,7 +3519,9 @@ namespace Rux {
     bool Rcu::Dump(const RcuFile& file, const std::filesystem::path& path) {
         const std::string text = RcuDumper::Dump(file);
         std::ofstream f(path, std::ios::out | std::ios::trunc);
-        if (!f) return false;
+        if (!f) {
+            return false;
+        }
         f << text;
         return f.good();
     }

@@ -70,16 +70,16 @@ namespace Rux {
 
         // Whitespace / comments
         void SkipWhitespace();
-        void SkipLineComment(); // // …
+        void SkipLineComment();  // // …
         void SkipBlockComment(); // /* … */  (supports nesting)
 
         // Scanners for each token family
         Token ScanIdent(SourceLocation start);
-        Token ScanNumber(SourceLocation start); // int and float
+        Token ScanNumber(SourceLocation start);                            // int and float
         Token ScanString(SourceLocation start, std::size_t prefixLen = 0); // "…" / c8"…" / c16"…" / c32"…"
-        Token ScanChar(SourceLocation start, std::size_t prefixLen = 0); // '…' / c8'…' / c16'…' / c32'…'
-        Token ScanSymbol(SourceLocation start); // operators & punctuation
-        Token ScanUnknown(SourceLocation start); // fallback for bad chars
+        Token ScanChar(SourceLocation start, std::size_t prefixLen = 0);   // '…' / c8'…' / c16'…' / c32'…'
+        Token ScanSymbol(SourceLocation start);                            // operators & punctuation
+        Token ScanUnknown(SourceLocation start);                           // fallback for bad chars
 
         // Literal helpers
         Token ScanIntLiteral(SourceLocation start, std::size_t tokenStart);

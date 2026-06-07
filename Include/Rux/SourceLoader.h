@@ -9,7 +9,7 @@ namespace Rux {
     // Represents a single loaded source file.
     struct SourceFile {
         std::filesystem::path path; // Absolute path to the file
-        std::string source; // Full file contents
+        std::string source;         // Full file contents
     };
 
     // Result of a load operation.

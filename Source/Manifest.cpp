@@ -24,23 +24,34 @@ namespace Rux {
     static std::string ParseInlineTableString(std::string_view val, std::string_view keyName) {
         const auto open = val.find('{');
         const auto close = val.rfind('}');
-        if (open == std::string_view::npos || close == std::string_view::npos || close <= open) return {};
+        if (open == std::string_view::npos || close == std::string_view::npos || close <= open) {
+            return {};
+        }
         std::string_view inner = val.substr(open + 1, close - open - 1);
         const auto keyPos = inner.find(keyName);
-        if (keyPos == std::string_view::npos) return {};
+        if (keyPos == std::string_view::npos) {
+            return {};
+        }
         const auto eqPos = inner.find('=', keyPos + keyName.size());
-        if (eqPos == std::string_view::npos) return {};
+        if (eqPos == std::string_view::npos) {
+            return {};
+        }
         std::size_t valueEnd = eqPos + 1;
         bool inString = false;
         while (valueEnd < inner.size()) {
             const char c = inner[valueEnd];
-            if (c == '"') inString = !inString;
-            if (!inString && c == ',') break;
+            if (c == '"') {
+                inString = !inString;
+            }
+            if (!inString && c == ',') {
+                break;
+            }
             ++valueEnd;
         }
         const auto rawVal = Trim(inner.substr(eqPos + 1, valueEnd - eqPos - 1));
-        if (rawVal.size() >= 2 && rawVal.front() == '"' && rawVal.back() == '"')
+        if (rawVal.size() >= 2 && rawVal.front() == '"' && rawVal.back() == '"') {
             return std::string(rawVal.substr(1, rawVal.size() - 2));
+        }
         return std::string(rawVal);
     }
 
@@ -64,10 +75,14 @@ namespace Rux {
             constexpr std::string_view prefix = "Target.";
             constexpr std::string_view suffix = ".Dependencies";
             if (section.starts_with(prefix) && section.ends_with(suffix)) {
-                if (section.size() <= prefix.size() + suffix.size()) return std::nullopt;
+                if (section.size() <= prefix.size() + suffix.size()) {
+                    return std::nullopt;
+                }
                 const auto begin = prefix.size();
                 const auto len = section.size() - prefix.size() - suffix.size();
-                if (len > 0) return section.substr(begin, len);
+                if (len > 0) {
+                    return section.substr(begin, len);
+                }
             }
         }
         // [Dependencies.Target.OS] — preferred format
@@ -75,7 +90,9 @@ namespace Rux {
             constexpr std::string_view prefix = "Dependencies.Target.";
             if (section.starts_with(prefix)) {
                 const auto os = section.substr(prefix.size());
-                if (!os.empty()) return std::string(os);
+                if (!os.empty()) {
+                    return std::string(os);
+                }
             }
         }
         return std::nullopt;
@@ -83,19 +100,30 @@ namespace Rux {
 
     // Canonicalize OS names from Rux.toml section keys (e.g. "MacOS" → "macOS").
     static std::string CanonicalOsName(const std::string& name) {
-        if (name == "MacOS" || name == "Macos" || name == "macos") return "macOS";
+        if (name == "MacOS" || name == "Macos" || name == "macos") {
+            return "macOS";
+        }
         return name;
     }
 
     // Extract the OS name from a target triple (e.g. "windows-x64" → "Windows").
     static std::string OsFromTriple(const std::string& triple) {
-        if (triple.starts_with("windows")) return "Windows";
-        if (triple.starts_with("linux")) return "Linux";
-        if (triple.starts_with("macos") || triple.starts_with("darwin")) return "macOS";
+        if (triple.starts_with("windows")) {
+            return "Windows";
+        }
+        if (triple.starts_with("linux")) {
+            return "Linux";
+        }
+        if (triple.starts_with("macos") || triple.starts_with("darwin")) {
+            return "macOS";
+        }
         if (triple.starts_with("freebsd") || triple.starts_with("openbsd") || triple.starts_with("netbsd") ||
-            triple.starts_with("dragonfly"))
+            triple.starts_with("dragonfly")) {
             return "BSD";
-        if (triple.starts_with("illumos")) return "Illumos";
+        }
+        if (triple.starts_with("illumos")) {
+            return "Illumos";
+        }
         return {};
     }
 
@@ -108,7 +136,9 @@ namespace Rux {
 
     std::optional<Manifest> Manifest::Load(const std::filesystem::path& path) {
         std::ifstream file(path);
-        if (!file) return std::nullopt;
+        if (!file) {
+            return std::nullopt;
+        }
 
         Manifest m;
         std::string line;
@@ -117,7 +147,9 @@ namespace Rux {
         while (std::getline(file, line)) {
             std::string_view trimmed = Trim(line);
 
-            if (trimmed.empty() || trimmed.starts_with('#')) continue;
+            if (trimmed.empty() || trimmed.starts_with('#')) {
+                continue;
+            }
 
             if (trimmed.starts_with('[')) {
                 if (const auto close = trimmed.find(']'); close != std::string_view::npos) {
@@ -127,21 +159,28 @@ namespace Rux {
             }
 
             const auto eq = trimmed.find('=');
-            if (eq == std::string_view::npos) continue;
+            if (eq == std::string_view::npos) {
+                continue;
+            }
 
             const auto key = Trim(trimmed.substr(0, eq));
             const auto value = Unquote(Trim(trimmed.substr(eq + 1)));
 
             if (section == "Package") {
-                if (key == "Name")
+                if (key == "Name") {
                     m.package.name = value;
-                else if (key == "Version")
+                }
+                else if (key == "Version") {
                     m.package.version = value;
-                else if (key == "Type")
+                }
+                else if (key == "Type") {
                     m.package.type = value;
+                }
             }
             else if (section == "Build") {
-                if (key == "Output") m.build.output = value;
+                if (key == "Output") {
+                    m.build.output = value;
+                }
             }
             else if (section == "Dependencies") {
                 m.dependencies.push_back(ParseDependency(std::string(key), std::string(value)));
@@ -152,13 +191,17 @@ namespace Rux {
             }
         }
 
-        if (m.package.name.empty()) return std::nullopt;
+        if (m.package.name.empty()) {
+            return std::nullopt;
+        }
         return m;
     }
 
     bool Manifest::Save(const std::filesystem::path& path) const {
         std::ofstream file(path);
-        if (!file) return false;
+        if (!file) {
+            return false;
+        }
 
         file << "[Package]\n"
              << "Name    = \"" << package.name << "\"\n"
@@ -179,7 +222,9 @@ namespace Rux {
                         wrote = true;
                     }
                     if (!dep.path.empty()) {
-                        if (wrote) file << ", ";
+                        if (wrote) {
+                            file << ", ";
+                        }
                         file << "Path = \"" << dep.path << "\"";
                     }
                     file << " }\n";
@@ -191,7 +236,9 @@ namespace Rux {
             }
         }
         for (const auto& [target, deps] : targetDependencies) {
-            if (deps.empty()) continue;
+            if (deps.empty()) {
+                continue;
+            }
             file << "\n[Target." << target << ".Dependencies]\n";
             for (const auto& dep : deps) {
                 const bool hasPackageAlias = !dep.package.empty() && dep.package != dep.name;
@@ -203,7 +250,9 @@ namespace Rux {
                         wrote = true;
                     }
                     if (!dep.path.empty()) {
-                        if (wrote) file << ", ";
+                        if (wrote) {
+                            file << ", ";
+                        }
                         file << "Path = \"" << dep.path << "\"";
                     }
                     file << " }\n";
@@ -219,7 +268,9 @@ namespace Rux {
 
     bool Manifest::AddDependency(const std::string& name, const std::string& version) {
         if (const auto it = std::ranges::find(dependencies, name, &Dependency::name); it != dependencies.end()) {
-            if (it->version == version) return false;
+            if (it->version == version) {
+                return false;
+            }
             it->version = version;
             it->path.clear();
             return true;
@@ -230,7 +281,9 @@ namespace Rux {
 
     bool Manifest::AddPathDependency(const std::string& name, const std::string& path) {
         if (const auto it = std::ranges::find(dependencies, name, &Dependency::name); it != dependencies.end()) {
-            if (it->path == path) return false;
+            if (it->path == path) {
+                return false;
+            }
             it->version.clear();
             it->path = path;
             return true;
@@ -244,22 +297,27 @@ namespace Rux {
 
         auto mergeFrom = [&](const std::string& key) {
             auto it = targetDependencies.find(key);
-            if (it == targetDependencies.end()) return;
+            if (it == targetDependencies.end()) {
+                return;
+            }
             for (const auto& targetDep : it->second) {
                 auto existing =
                     std::ranges::find_if(result, [&](const Dependency& dep) { return dep.name == targetDep.name; });
-                if (existing == result.end())
+                if (existing == result.end()) {
                     result.push_back(targetDep);
-                else
+                }
+                else {
                     *existing = targetDep;
+                }
             }
         };
 
-        mergeFrom("*"); // wildcard dependencies
+        mergeFrom("*");    // wildcard dependencies
         mergeFrom(target); // exact key (e.g. "windows-x64" or "Windows")
         const std::string osName = OsFromTriple(target);
-        if (!osName.empty() && osName != target)
+        if (!osName.empty() && osName != target) {
             mergeFrom(osName); // OS-name key (e.g. "Windows" when target is "windows-x64")
+        }
 
         return result;
     }
@@ -276,7 +334,9 @@ namespace Rux {
                 return candidate;
             }
             auto parent = dir.parent_path();
-            if (parent == dir) break;
+            if (parent == dir) {
+                break;
+            }
             dir = std::move(parent);
         }
 

@@ -25,7 +25,7 @@ namespace Rux {
         std::string sourceName;
         SourceLocation location;
         std::string resolvedType; // TypeRef::ToString(), empty for opaque types
-        bool isMut = false; // meaningful for Var
+        bool isMut = false;       // meaningful for Var
     };
 
     struct SemaResult {
