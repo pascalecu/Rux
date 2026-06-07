@@ -8,20 +8,9 @@ include(Language)
 include(PlatformDetect)
 include(CompilerDetect)
 include(Architecture)
+include(CompilerFlags)
 
 string(TIMESTAMP RUX_BUILD_TIMESTAMP "%Y-%m-%dT%H:%M:%SZ" UTC)
-
-# Handle C++26 cleanly across all toolchains
-if (MSVC)
-    # Bypasses CMake feature tracking limits by directly enforcing MSVC's latest flag
-    add_compile_options(/std:c++latest)
-endif ()
-
-# Target libc++ specifically for Clang on Linux to support C++26 features like <print>
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT APPLE AND UNIX)
-    add_compile_options(-stdlib=libc++)
-    add_link_options(-stdlib=libc++)
-endif ()
 
 configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/Include/Rux/Version.h.in
@@ -59,10 +48,7 @@ add_executable(rux
         Source/Linker.cpp
 )
 
-# GCC/MinGW: link experimental libstdc++ extensions (needed for <print> support in some builds)
-if (MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_link_libraries(rux PRIVATE stdc++exp)
-endif ()
+target_link_libraries(rux PRIVATE rux_compiler_flags)
 
 target_include_directories(rux PRIVATE
         Include
@@ -79,13 +65,15 @@ target_compile_definitions(rux PRIVATE
 
         $<$<CONFIG:Debug>:RUX_BUILD_RELEASE=0>
         $<$<NOT:$<CONFIG:Debug>>:RUX_BUILD_RELEASE=1>
-)
 
-foreach (std IN ITEMS 98 11 14 17 20 23 26)
-    target_compile_definitions(rux PRIVATE
-            RUX_CXX_AT_LEAST_${std}=${RUX_CXX_AT_LEAST_${std}}
-    )
-endforeach ()
+        RUX_CXX_AT_LEAST_98=${RUX_CXX_AT_LEAST_98}
+        RUX_CXX_AT_LEAST_11=${RUX_CXX_AT_LEAST_11}
+        RUX_CXX_AT_LEAST_14=${RUX_CXX_AT_LEAST_14}
+        RUX_CXX_AT_LEAST_17=${RUX_CXX_AT_LEAST_17}
+        RUX_CXX_AT_LEAST_20=${RUX_CXX_AT_LEAST_20}
+        RUX_CXX_AT_LEAST_23=${RUX_CXX_AT_LEAST_23}
+        RUX_CXX_AT_LEAST_26=${RUX_CXX_AT_LEAST_26}
+)
 
 set_property(TARGET rux
         PROPERTY MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Release>,MultiThreaded,MultiThreadedDebugDLL>"
