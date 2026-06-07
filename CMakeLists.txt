@@ -14,19 +14,19 @@ string(TIMESTAMP RUX_BUILD_TIMESTAMP "%Y-%m-%dT%H:%M:%SZ" UTC)
 
 configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/Include/Rux/Version.h.in
-        ${CMAKE_CURRENT_BINARY_DIR}/generated/Rux/Version.h
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/Version.h
         @ONLY
 )
 
 configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/Include/Rux/PlatformConfig.h.in
-        ${CMAKE_CURRENT_BINARY_DIR}/generated/Rux/PlatformConfig.h
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/PlatformConfig.h
         @ONLY
 )
 
 configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/Include/Rux/CompilerConfig.h.in
-        ${CMAKE_CURRENT_BINARY_DIR}/generated/Rux/CompilerConfig.h
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/CompilerConfig.h
         @ONLY
 )
 
