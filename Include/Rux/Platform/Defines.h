@@ -103,25 +103,17 @@
 #  define RUX_COMPILER_MSVC 1
 #  define RUX_COMPILER_CLANG 0
 #  define RUX_COMPILER_GCC 0
-#  define RUX_CPLUSPLUS _MSVC_LANG
 #elifdef __clang__
 #  define RUX_COMPILER_MSVC 0
 #  define RUX_COMPILER_CLANG 1
 #  define RUX_COMPILER_GCC 0
-#  define RUX_CPLUSPLUS __cplusplus
 #elifdef __GNUC__
 #  define RUX_COMPILER_MSVC 0
 #  define RUX_COMPILER_CLANG 0
 #  define RUX_COMPILER_GCC 1
-#  define RUX_CPLUSPLUS __cplusplus
 #else
 #  error "Unsupported compiler"
 #endif
-
-#define RUX_CXX_14 (RUX_CPLUSPLUS >= 201402L)
-#define RUX_CXX_17 (RUX_CPLUSPLUS >= 201703L)
-#define RUX_CXX_20 (RUX_CPLUSPLUS >= 202002L)
-#define RUX_CXX_23 (RUX_CPLUSPLUS >= 202302L)
 
 #ifndef RUX_BUILD_DEBUG
 #  define RUX_BUILD_DEBUG 0

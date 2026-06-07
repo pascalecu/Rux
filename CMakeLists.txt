@@ -4,6 +4,7 @@ project(Rux VERSION 0.3.0 LANGUAGES CXX)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(ProjectOptions)
 include(Version)
+include(Language)
 
 string(TIMESTAMP RUX_BUILD_TIMESTAMP "%Y-%m-%dT%H:%M:%SZ" UTC)
 
@@ -11,9 +12,6 @@ string(TIMESTAMP RUX_BUILD_TIMESTAMP "%Y-%m-%dT%H:%M:%SZ" UTC)
 if (MSVC)
     # Bypasses CMake feature tracking limits by directly enforcing MSVC's latest flag
     add_compile_options(/std:c++latest)
-else ()
-    set(CMAKE_CXX_STANDARD 26)
-    set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif ()
 
 # Target libc++ specifically for Clang on Linux to support C++26 features like <print>
@@ -67,6 +65,12 @@ target_compile_definitions(rux PRIVATE
         $<$<CONFIG:Debug>:RUX_BUILD_RELEASE=0>
         $<$<NOT:$<CONFIG:Debug>>:RUX_BUILD_RELEASE=1>
 )
+
+foreach (std IN ITEMS 98 11 14 17 20 23 26)
+    target_compile_definitions(rux PRIVATE
+            RUX_CXX_AT_LEAST_${std}=${RUX_LANG_STDCPP_AT_LEAST_${std}}
+    )
+endforeach ()
 
 set_property(TARGET rux
         PROPERTY MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Release>,MultiThreaded,MultiThreadedDebugDLL>"
