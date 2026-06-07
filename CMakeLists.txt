@@ -6,6 +6,7 @@ include(ProjectOptions)
 include(Version)
 include(Language)
 include(PlatformDetect)
+include(CompilerDetect)
 
 string(TIMESTAMP RUX_BUILD_TIMESTAMP "%Y-%m-%dT%H:%M:%SZ" UTC)
 
@@ -30,6 +31,12 @@ configure_file(
 configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/Include/Rux/PlatformConfig.h.in
         ${CMAKE_CURRENT_BINARY_DIR}/generated/Rux/PlatformConfig.h
+        @ONLY
+)
+
+configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/Include/Rux/CompilerConfig.h.in
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/Rux/CompilerConfig.h
         @ONLY
 )
 
