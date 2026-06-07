@@ -1,0 +1,16 @@
+# Generated from CLion Inspection settings
+---
+Checks: '*,
+-abseil-*,
+-altera-*,
+-android-*,
+-boost-*,
+-darwin-*,
+-fuchsia-*,
+-linuxkernel-*,
+-llvmlibc-*,
+-objc-*,
+-openmp-*,
+-zircon-*,
+-portability-*,
+portability-simd-intrinsics'
