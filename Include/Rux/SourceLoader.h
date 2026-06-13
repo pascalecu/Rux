@@ -29,7 +29,6 @@ namespace Rux {
         static std::expected<std::string_view, std::error_code>
         LoadFile(const std::filesystem::path& path, SourceManager& manager);
 
-    private:
         // Collect all *.rux paths under a directory tree (recursive).
         static std::vector<std::filesystem::path>
         CollectSourcePaths(const std::filesystem::path& srcDir);
