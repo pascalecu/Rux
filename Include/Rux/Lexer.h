@@ -30,14 +30,10 @@ namespace Rux {
 
     class Lexer {
     public:
-        // Construct from in-memory source text.
+        // Construct from an existing text buffer managed by the SourceManager.
         // `sourceName` is used only for diagnostic messages (e.g. file path).
-        explicit Lexer(std::string source, std::string sourceName = "<input>");
-
-        // Convenience: read file from disk and lex it.
-        // Returns std::nullopt if the file cannot be read.
-        [[nodiscard]] static std::optional<LexerResult>
-        FromFile(const std::filesystem::path& path);
+        explicit Lexer(std::string_view source,
+                       std::string_view sourceName = "<input>");
 
         // Run the full lexer pass and return all tokens + diagnostics.
         [[nodiscard]] LexerResult Tokenize();
@@ -52,8 +48,8 @@ namespace Rux {
 
     private:
         // Source buffer
-        std::string source;
-        std::string sourceName;
+        std::string_view source;
+        std::string_view sourceName;
 
         // Cursor state
         std::size_t pos = 0; // current byte position

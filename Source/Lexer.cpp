@@ -82,26 +82,9 @@ namespace Rux {
         return false;
     }
 
-    Lexer::Lexer(std::string source, std::string sourceName)
-        : source(std::move(source))
-        , sourceName(std::move(sourceName)) {
-    }
-
-    std::optional<LexerResult>
-    Lexer::FromFile(const std::filesystem::path& path) {
-        std::ifstream f(path, std::ios::binary);
-        if (!f) {
-            std::print(stderr, "error: cannot open '{}'\n", path.string());
-            return std::nullopt;
-        }
-        std::ostringstream ss;
-        ss << f.rdbuf();
-        if (!f && !f.eof()) {
-            std::print(stderr, "error: failed to read '{}'\n", path.string());
-            return std::nullopt;
-        }
-        Lexer lex(ss.str(), path.string());
-        return lex.Tokenize();
+    Lexer::Lexer(std::string_view source, std::string_view sourceName)
+        : source(source)
+        , sourceName(sourceName) {
     }
 
     LexerResult Lexer::Tokenize() {
@@ -421,9 +404,9 @@ namespace Rux {
             }
             Advance();
         }
-        std::string text = source.substr(tokenStart, pos - tokenStart);
+        std::string_view text = source.substr(tokenStart, pos - tokenStart);
         const TokenKind kind = KeywordKind(text);
-        return Token{kind, std::move(text), start};
+        return Token{kind, std::string(text), start};
     }
 
     Token Lexer::ScanNumber(SourceLocation start) {
@@ -585,7 +568,7 @@ namespace Rux {
 
         // token text preserves the original source spelling (including quotes)
         return Token{TokenKind::StringLiteral,
-                     source.substr(tokenStart, pos - tokenStart),
+                     std::string(source.substr(tokenStart, pos - tokenStart)),
                      start};
     }
 
@@ -609,7 +592,7 @@ namespace Rux {
             EmitError(start, "unterminated character literal");
         }
         return Token{TokenKind::CharLiteral,
-                     source.substr(tokenStart, pos - tokenStart),
+                     std::string(source.substr(tokenStart, pos - tokenStart)),
                      start};
     }
 
@@ -924,13 +907,17 @@ namespace Rux {
         EmitError(start,
                   std::string("unexpected character '") + source[tokenStart] +
                       "'");
-        return Token{TokenKind::Unknown, source.substr(tokenStart, 1), start};
+        return Token{TokenKind::Unknown,
+                     std::string(source.substr(tokenStart, 1)),
+                     start};
     }
 
     Token Lexer::MakeToken(const TokenKind kind,
                            const SourceLocation start,
                            const std::size_t tokenStart) const {
-        return Token{kind, source.substr(tokenStart, pos - tokenStart), start};
+        return Token{kind,
+                     std::string(source.substr(tokenStart, pos - tokenStart)),
+                     start};
     }
 
     void Lexer::EmitError(const SourceLocation loc, std::string message) {
