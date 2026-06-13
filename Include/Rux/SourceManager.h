@@ -3,9 +3,9 @@
 
 #pragma once
 
+#include <expected>
 #include <filesystem>
 #include <memory>
-#include <optional>
 #include <shared_mutex>
 #include <string>
 #include <string_view>
@@ -33,7 +33,7 @@ namespace Rux {
 
         [[nodiscard]]
         auto LoadFile(const std::filesystem::path& path)
-            -> std::optional<std::string_view>;
+            -> std::expected<std::string_view, std::error_code>;
 
         [[nodiscard]]
         auto LoadVirtual(std::string name, std::string content)
@@ -43,7 +43,7 @@ namespace Rux {
         const SourceFile* GetFile(std::string_view name) const;
 
     private:
-        [[nodiscard]]
+        const SourceFile* RegisterFile(std::string name, std::string content);
         const SourceFile* GetFileUnlocked(std::string_view name) const noexcept;
 
         mutable std::shared_mutex rwMutex;
