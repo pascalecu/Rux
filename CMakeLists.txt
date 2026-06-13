@@ -30,6 +30,7 @@ set(RUX_SOURCES
         Source/Manifest.cpp
         Source/Package.cpp
         Source/Token.cpp
+        Source/SourceManager.cpp
         Source/Lexer.cpp
         Source/SourceLoader.cpp
         Source/Parser.cpp
