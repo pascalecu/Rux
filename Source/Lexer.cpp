@@ -92,7 +92,7 @@ namespace Rux {
         diagnostics.clear();
         pos = 0;
         line = 1;
-        col = 1;
+        bol = 1;
         ScanAll();
         // Always append a synthetic EOF token
         tokens.push_back(Token{TokenKind::EndOfFile, {}, CurrentLocation()});
@@ -109,7 +109,7 @@ namespace Rux {
             std::print(f,
                        "{:>4}:{:<4}  {:<16}  {}\n",
                        tok.location.line,
-                       tok.location.column,
+                       tok.location.Column(),
                        std::string(TokenKindName(tok.kind)),
                        tok.text);
         }
@@ -119,7 +119,7 @@ namespace Rux {
                 std::print(f,
                            "{:>4}:{:<4}  {}  {}\n",
                            d.location.line,
-                           d.location.column,
+                           d.location.Column(),
                            d.severity == LexerDiagnostic::Severity::Error
                                ? "error  "
                                : "warning",
@@ -208,7 +208,7 @@ namespace Rux {
 
             if (Token tok = NextToken();
                 tok.kind != TokenKind::Unknown || !tok.text.empty()) {
-                tokens.push_back(std::move(tok));
+                tokens.push_back(tok);
             }
         }
     }
@@ -272,11 +272,9 @@ namespace Rux {
         const char c = source[pos++];
         if (c == '\n') {
             ++line;
-            col = 1;
+            bol = pos;
         }
-        else {
-            ++col;
-        }
+
         return c;
     }
 
@@ -329,7 +327,7 @@ namespace Rux {
     }
 
     SourceLocation Lexer::CurrentLocation() const noexcept {
-        return {line, col, static_cast<std::uint32_t>(pos)};
+        return {line, pos, bol};
     }
 
     // Whitespace / comments

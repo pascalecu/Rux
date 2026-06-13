@@ -267,10 +267,20 @@ namespace Rux {
     }
 
     std::string Token::Describe() const {
-        std::string d(TokenKindName(kind));
+        const std::string_view name = TokenKindName(kind);
+
         if (kind == TokenKind::Ident || IsLiteral()) {
-            d += " `" + text + "`";
+            std::string out;
+            out.reserve(name.size() + text.size() + 3);
+
+            out.append(name);
+            out.append(" `");
+            out.append(text);
+            out.push_back('`');
+
+            return out;
         }
-        return d;
+
+        return std::string(name);
     }
 } // namespace Rux

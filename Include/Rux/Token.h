@@ -137,14 +137,19 @@ namespace Rux {
     };
 
     struct SourceLocation {
-        std::uint32_t line = 1;   // 1-based
-        std::uint32_t column = 1; // 1-based (UTF-8 byte offset in line)
-        std::uint32_t offset = 0; // byte offset from start of file
+        std::size_t line = 1;
+        std::size_t offset = 0; // absolute byte offset in file (0-based)
+        std::size_t bol = 0;    // absolute byte offset of line start (0-based)
+
+        [[nodiscard]]
+        constexpr std::size_t Column() const noexcept {
+            return offset - bol + 1; // 1-based column
+        }
     };
 
     struct Token {
         TokenKind kind = TokenKind::Unknown;
-        std::string text; // original source spelling
+        std::string_view text; // original source spelling
         SourceLocation location;
 
         // Convenience predicates

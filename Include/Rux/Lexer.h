@@ -54,7 +54,7 @@ namespace Rux {
         // Cursor state
         std::size_t pos = 0; // current byte position
         std::uint32_t line = 1;
-        std::uint32_t col = 1;
+        std::uint32_t bol = 0; // offset of first character in current line
 
         // Output accumulators
         std::vector<Token> tokens;
