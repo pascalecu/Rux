@@ -54,6 +54,7 @@
 #endif
 
 #include "Rux/SourceLoader.h"
+#include "Rux/SourceManager.h"
 
 using namespace Rux;
 using namespace Platform;
@@ -112,7 +113,7 @@ auto JsonEscape(std::string_view s) -> std::string {
         out.reserve(s.size() + (s.size() / 10) + 16);
     }
     for (char ch : s) {
-        unsigned char u_ch = static_cast<unsigned char>(ch);
+        auto u_ch = static_cast<unsigned char>(ch);
         switch (u_ch) {
         case '"':
             out += "\\\"";
@@ -314,7 +315,8 @@ int HandlePendingIndex(
     std::vector<std::string>& loadedModuleNames,
     std::unordered_set<std::string>& queuedPackageNames,
     const std::function<void(std::string, int, int, std::string, std::string)>&
-        EmitDiag) {
+        EmitDiag,
+    SourceManager& manager) {
     for (std::size_t pendingIndex = 0; pendingIndex < pendingPackages.size();
          ++pendingIndex) {
         const auto& pendingPkg = pendingPackages[pendingIndex];
@@ -325,45 +327,55 @@ int HandlePendingIndex(
                        pendingPkg.root.string());
         }
 
-        auto depLoadResult = SourceLoader::Load(pendingPkg.root);
-        if (!depLoadResult) {
+        auto depLoadFailures = SourceLoader::Load(pendingPkg.root, manager);
+        if (!depLoadFailures) {
             hadErrors = true;
             break;
-        };
+        }
 
-        for (const auto& error : depLoadResult->errors) {
+        for (const auto& fail : *depLoadFailures) {
+            std::string errMsg = std::format("failed to load {}: {}",
+                                             fail.path.string(),
+                                             fail.error.message());
             if (jsonOutput) {
-                EmitDiag("", 0, 0, "error", error);
+                EmitDiag("", 0, 0, "error", errMsg);
                 hadErrors = true;
             }
             else {
-                std::print(stderr, "{}", error);
+                std::println(stderr, "error: {}", errMsg);
             }
         }
 
-        if (!depLoadResult->errors.empty()) {
+        if (!depLoadFailures->empty()) {
             hadErrors = true;
             break;
         }
 
+        auto depPaths =
+            SourceLoader::CollectSourcePaths(pendingPkg.root / "Src");
         std::vector<ParseResult> packageParseResults;
-        packageParseResults.reserve(depLoadResult->files.size());
+        packageParseResults.reserve(depPaths.size());
 
-        for (const auto& depFile : depLoadResult->files) {
-            Lexer depLexer(depFile.source, depFile.path.string());
+        for (const auto& path : depPaths) {
+            auto sourceResult = manager.LoadFile(path);
+            if (!sourceResult) {
+                continue;
+            }
+
+            Lexer depLexer(*sourceResult, path.string());
             auto depLex = depLexer.Tokenize();
 
-            for (const auto& diag : depLex.diagnostics) {
-                const char* sev =
-                    diag.severity == LexerDiagnostic::Severity::Error
-                        ? "error"
-                        : "warning";
-                EmitDiag(depFile.path.string(),
-                         static_cast<int>(diag.location.line),
-                         static_cast<int>(diag.location.column),
+            for (const auto& [severity, location, message] :
+                 depLex.diagnostics) {
+                const char* sev = severity == LexerDiagnostic::Severity::Error
+                                    ? "error"
+                                    : "warning";
+                EmitDiag(path.string(),
+                         static_cast<int>(location.line),
+                         static_cast<int>(location.column),
                          sev,
-                         diag.message);
-                if (diag.severity == LexerDiagnostic::Severity::Error) {
+                         message);
+                if (severity == LexerDiagnostic::Severity::Error) {
                     hadErrors = true;
                 }
             }
@@ -372,7 +384,7 @@ int HandlePendingIndex(
                 break;
             }
 
-            Parser depParser(std::move(depLex.tokens), depFile.path.string());
+            Parser depParser(std::move(depLex.tokens), path.string());
             auto depParse = depParser.Parse();
 
             for (const auto& diag : depParse.diagnostics) {
@@ -380,7 +392,7 @@ int HandlePendingIndex(
                     diag.severity == ParserDiagnostic::Severity::Error
                         ? "error"
                         : "warning";
-                EmitDiag(depFile.path.string(),
+                EmitDiag(path.string(),
                          static_cast<int>(diag.location.line),
                          static_cast<int>(diag.location.column),
                          sev,
@@ -571,34 +583,54 @@ int Cli::RunCheck(std::span<const std::string_view> args,
                    manifestPath->parent_path().string());
     }
 
-    auto loadResult = SourceLoader::Load(manifestPath->parent_path());
-    if (!loadResult) {
+    SourceManager manager;
+    auto loadFailures =
+        SourceLoader::Load(manifestPath->parent_path(), manager);
+    if (!loadFailures) {
         if (jsonOutput) {
-            EmitFatal("failed to load source files");
+            EmitFatal("failed to locate or read 'Src' directory");
         }
         return 1;
     }
 
-    for (const auto& err : loadResult->errors) {
+    for (const auto& fail : *loadFailures) {
+        std::string errMsg = std::format(
+            "failed to load {}: {}", fail.path.string(), fail.error.message());
         if (jsonOutput) {
-            EmitDiag("", 0, 0, "error", err);
+            EmitDiag("", 0, 0, "error", errMsg);
             hadErrors = true;
         }
         else {
-            std::print(stderr, "{}", err);
+            std::println(stderr, "error: {}", errMsg);
         }
     }
 
     bool lexErrors = false;
     std::vector<LexerResult> lexResults;
-    lexResults.reserve(loadResult->files.size());
 
-    for (const auto& file : loadResult->files) {
-        if (opts.verbose && !jsonOutput) {
-            std::print("    Lexing {}\n", file.path.string());
+    std::vector<std::filesystem::path> successfulPaths;
+    auto srcPaths =
+        SourceLoader::CollectSourcePaths(manifestPath->parent_path() / "Src");
+    lexResults.reserve(srcPaths.size());
+
+    for (const auto& path : srcPaths) {
+        if (std::ranges::any_of(
+                *loadFailures, [&](const auto& f) { return f.path == path; })) {
+            continue;
         }
 
-        Lexer lexer(file.source, file.path.string());
+        if (opts.verbose && !jsonOutput) {
+            std::println("    Lexing {}", path.string());
+        }
+
+        auto sourceResult = manager.LoadFile(path);
+        if (!sourceResult) {
+            continue;
+        }
+
+        successfulPaths.push_back(path);
+
+        Lexer lexer(*sourceResult, path.string());
         auto lexResult = lexer.Tokenize();
 
         for (const auto& diag : lexResult.diagnostics) {
@@ -606,7 +638,7 @@ int Cli::RunCheck(std::span<const std::string_view> args,
             const char* sev = diag.severity == LexerDiagnostic::Severity::Error
                                 ? "error"
                                 : "warning";
-            EmitDiag(file.path.string(),
+            EmitDiag(path.string(),
                      static_cast<int>(loc.line),
                      static_cast<int>(loc.column),
                      sev,
@@ -624,13 +656,14 @@ int Cli::RunCheck(std::span<const std::string_view> args,
 
     bool parseErrors = false;
     std::vector<ParseResult> parseResults;
-    parseResults.reserve(loadResult->files.size());
+    parseResults.reserve(successfulPaths.size());
 
-    for (std::size_t fileIndex = 0; fileIndex < loadResult->files.size();
+    for (std::size_t fileIndex = 0; fileIndex < successfulPaths.size();
          ++fileIndex) {
-        const auto& file = loadResult->files[fileIndex];
+        const auto& path = successfulPaths[fileIndex];
+
         if (opts.verbose && !jsonOutput) {
-            std::print("    Parsing {}\n", file.path.string());
+            std::print("    Parsing {}\n", path.string());
         }
 
         auto& lexResult = lexResults[fileIndex];
@@ -638,20 +671,21 @@ int Cli::RunCheck(std::span<const std::string_view> args,
             continue;
         }
 
-        Parser parser(std::move(lexResult.tokens), file.path.string());
+        Parser parser(std::move(lexResult.tokens), path.string());
         auto parseResult = parser.Parse();
 
-        for (const auto& diag : parseResult.diagnostics) {
-            const auto& loc = diag.location;
-            const char* sev = diag.severity == ParserDiagnostic::Severity::Error
+        for (const auto& [severity, location, message] :
+             parseResult.diagnostics) {
+            const auto& loc = location;
+            const char* sev = severity == ParserDiagnostic::Severity::Error
                                 ? "error"
                                 : "warning";
-            EmitDiag(file.path.string(),
+            EmitDiag(path.string(),
                      static_cast<int>(loc.line),
                      static_cast<int>(loc.column),
                      sev,
-                     diag.message);
-            if (diag.severity == ParserDiagnostic::Severity::Error) {
+                     message);
+            if (severity == ParserDiagnostic::Severity::Error) {
                 parseErrors = true;
             }
         }
@@ -716,7 +750,8 @@ int Cli::RunCheck(std::span<const std::string_view> args,
                            loadedPackages,
                            loadedModuleNames,
                            queuedPackageNames,
-                           EmitDiag);
+                           EmitDiag,
+                           manager);
     }
 
     if (!hadErrors) {

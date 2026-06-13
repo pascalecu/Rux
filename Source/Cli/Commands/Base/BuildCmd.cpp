@@ -56,6 +56,7 @@
 #endif
 
 #include "Rux/SourceLoader.h"
+#include "Rux/SourceManager.h"
 
 using namespace Rux;
 using namespace Platform;
@@ -189,46 +190,58 @@ int Cli::RunBuild(std::span<const std::string_view> args,
 
     // ── Lex ───────────────────────────────────────────────────────────────
     Misc::BuildStats stats;
-    auto loadResult = SourceLoader::Load(manifestPath->parent_path());
+    SourceManager manager;
+
+    auto loadResult = SourceLoader::Load(manifestPath->parent_path(), manager);
+
     if (!loadResult) {
         return 1;
     }
 
-    stats.localFiles = loadResult->files.size();
-    for (const auto& file : loadResult->files) {
-        stats.localLines += CountLines(file.source);
-        stats.localSourceSize += file.source.size();
+    if (!loadResult->empty()) {
+        for (const auto& [path, error] : *loadResult) {
+            std::println(stderr,
+                         "error: cannot read source file '{}': {}",
+                         path.string(),
+                         error.message());
+        }
+        return 1;
     }
 
-    for (const auto& err : loadResult->errors) {
-        std::print(stderr, "{}", err);
+    const auto& localFiles = manager.GetAllFiles();
+    stats.localFiles = localFiles.size();
+
+    for (const auto& file : localFiles) {
+        stats.localLines += CountLines(file->GetView());
+        stats.localSourceSize += file->buffer.size();
     }
 
     bool lexErrors = false;
     std::vector<LexerResult> lexResults;
-    lexResults.reserve(loadResult->files.size());
+    lexResults.reserve(localFiles.size());
     const auto localLexingStart = std::chrono::steady_clock::now();
-    for (const auto& file : loadResult->files) {
+    for (const auto* file : localFiles) {
         if (opts.verbose) {
-            std::print("     Lexing {}\n", file.path.string());
+            std::print("     Lexing {}\n", file->name);
         }
 
-        Lexer lexer(file.source, file.path.string());
+        Lexer lexer(file->GetView(), file->name);
         auto lexResult = lexer.Tokenize();
         stats.localTokens += CountTokens(lexResult);
 
-        for (const auto& diag : lexResult.diagnostics) {
-            const auto& loc = diag.location;
-            const char* sev = diag.severity == LexerDiagnostic::Severity::Error
+        for (const auto& [severity, location, message] :
+             lexResult.diagnostics) {
+            const auto& loc = location;
+            const char* sev = severity == LexerDiagnostic::Severity::Error
                                 ? "error"
                                 : "warning";
             std::print(stderr,
                        "{}:{}:{}: {}: {}\n",
-                       file.path.string(),
+                       file->name,
                        loc.line,
                        loc.column,
                        sev,
-                       diag.message);
+                       message);
         }
         if (lexResult.HasErrors()) {
             lexErrors = true;
@@ -238,7 +251,7 @@ int Cli::RunBuild(std::span<const std::string_view> args,
             auto tempDir = manifestPath->parent_path() / "Temp" / "Tokens";
             std::filesystem::create_directories(tempDir);
             auto rel = std::filesystem::relative(
-                file.path, manifestPath->parent_path() / "Src");
+                file->name, manifestPath->parent_path() / "Src");
             auto tokPath = tempDir / rel;
             tokPath.replace_extension(".tokens");
             Lexer::DumpTokens(lexResult, tokPath);
@@ -254,14 +267,14 @@ int Cli::RunBuild(std::span<const std::string_view> args,
     // Parse
     bool parseErrors = false;
     std::vector<ParseResult> parseResults;
-    parseResults.reserve(loadResult->files.size());
+    parseResults.reserve(localFiles.size());
 
     const auto localParsingStart = std::chrono::steady_clock::now();
-    for (std::size_t fileIndex = 0; fileIndex < loadResult->files.size();
+    for (std::size_t fileIndex = 0; fileIndex < localFiles.size();
          ++fileIndex) {
-        const auto& file = loadResult->files[fileIndex];
+        const auto& file = localFiles[fileIndex];
         if (opts.verbose) {
-            std::print("    Parsing {}\n", file.path.string());
+            std::println("    Parsing {}", file->name);
         }
 
         auto& lexResult = lexResults[fileIndex];
@@ -269,21 +282,22 @@ int Cli::RunBuild(std::span<const std::string_view> args,
             continue;
         }
 
-        Parser parser(std::move(lexResult.tokens), file.path.string());
+        Parser parser(std::move(lexResult.tokens), file->name);
         auto parseResult = parser.Parse();
 
-        for (const auto& diag : parseResult.diagnostics) {
-            const auto& loc = diag.location;
-            const char* sev = diag.severity == ParserDiagnostic::Severity::Error
+        for (const auto& [severity, location, message] :
+             parseResult.diagnostics) {
+            const auto& loc = location;
+            const char* sev = severity == ParserDiagnostic::Severity::Error
                                 ? "error"
                                 : "warning";
             std::print(stderr,
                        "{}:{}:{}: {}: {}\n",
-                       file.path.string(),
+                       file->name,
                        loc.line,
                        loc.column,
                        sev,
-                       diag.message);
+                       message);
         }
         if (parseResult.HasErrors()) {
             parseErrors = true;
@@ -295,7 +309,7 @@ int Cli::RunBuild(std::span<const std::string_view> args,
             auto tempDir = manifestPath->parent_path() / "Temp" / "Ast";
             std::filesystem::create_directories(tempDir);
             auto rel = std::filesystem::relative(
-                file.path, manifestPath->parent_path() / "Src");
+                file->name, manifestPath->parent_path() / "Src");
             auto astPath = (tempDir / rel).replace_extension(".ast");
             Parser::DumpAst(parseResult, astPath);
         }
@@ -428,35 +442,42 @@ int Cli::RunBuild(std::span<const std::string_view> args,
             const std::string packageName = pendingPackages[pendingIndex].name;
 
             if (opts.verbose) {
-                std::print("  Loading package {} from {}\n",
-                           packageName,
-                           pendingRoot.string());
+                std::println("  Loading package {} from {}",
+                             packageName,
+                             pendingRoot.string());
             }
 
-            auto depLoadResult = SourceLoader::Load(pendingRoot);
+            const std::size_t prevFileCount = manager.GetAllFiles().size();
+            auto depLoadResult = SourceLoader::Load(pendingRoot, manager);
             if (!depLoadResult) {
                 return 1;
             }
-            stats.dependencyFiles += depLoadResult->files.size();
-            for (const auto& depFile : depLoadResult->files) {
-                stats.dependencyLines += Rux::Misc::CountLines(depFile.source);
-                stats.dependencySourceSize += depFile.source.size();
-            }
-
-            for (const auto& error : depLoadResult->errors) {
-                std::print(stderr, "{}", error);
-            }
-            if (!depLoadResult->errors.empty()) {
+            if (!depLoadResult->empty()) {
+                for (const auto& [path, error] : *depLoadResult) {
+                    std::println(stderr,
+                                 "error: cannot read dependency file '{}': {}",
+                                 path.string(),
+                                 error.message());
+                }
                 return 1;
             }
+            const auto currentFiles = manager.GetAllFiles();
+            const std::size_t newlyAddedCount =
+                currentFiles.size() - prevFileCount;
+
+            stats.dependencyFiles += newlyAddedCount;
 
             std::vector<ParseResult> packageParseResults;
-            packageParseResults.reserve(depLoadResult->files.size());
+            packageParseResults.reserve(newlyAddedCount);
 
-            for (const auto& depFile : depLoadResult->files) {
+            for (std::size_t i = prevFileCount; i < currentFiles.size(); ++i) {
+                const auto* depFile = currentFiles[i];
+
                 const auto depLexingStart = std::chrono::steady_clock::now();
-                Lexer depLexer(depFile.source, depFile.path.string());
+
+                Lexer depLexer(depFile->GetView(), depFile->name);
                 auto depLex = depLexer.Tokenize();
+
                 const auto depLexingEnd = std::chrono::steady_clock::now();
                 stats.lexing += ElapsedMs(depLexingStart, depLexingEnd);
                 stats.dependencyTokens += CountTokens(depLex);
@@ -467,7 +488,7 @@ int Cli::RunBuild(std::span<const std::string_view> args,
                             : "warning";
                     std::print(stderr,
                                "{}:{}:{}: {}: {}\n",
-                               depFile.path.string(),
+                               depFile->name,
                                diag.location.line,
                                diag.location.column,
                                sev,
@@ -478,9 +499,10 @@ int Cli::RunBuild(std::span<const std::string_view> args,
                 }
 
                 const auto depParsingStart = std::chrono::steady_clock::now();
-                Parser depParser(std::move(depLex.tokens),
-                                 depFile.path.string());
+
+                Parser depParser(std::move(depLex.tokens), depFile->name);
                 auto depParse = depParser.Parse();
+
                 stats.parsing += ElapsedMs(depParsingStart);
                 for (const auto& diag : depParse.diagnostics) {
                     const char* sev =
@@ -489,7 +511,7 @@ int Cli::RunBuild(std::span<const std::string_view> args,
                             : "warning";
                     std::print(stderr,
                                "{}:{}:{}: {}: {}\n",
-                               depFile.path.string(),
+                               depFile->name,
                                diag.location.line,
                                diag.location.column,
                                sev,
@@ -541,7 +563,8 @@ int Cli::RunBuild(std::span<const std::string_view> args,
         userModules.push_back(&pr.module);
     }
 
-    // Build per-package dep info so Sema can isolate imported package symbols.
+    // Build per-package dep info so Sema can isolate imported package
+    // symbols.
     std::vector<DepPackage> depPackages;
     {
         std::unordered_map<std::string, std::size_t> pkgIdx;
