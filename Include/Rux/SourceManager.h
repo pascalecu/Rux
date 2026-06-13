@@ -42,6 +42,9 @@ namespace Rux {
         [[nodiscard]]
         const SourceFile* GetFile(std::string_view name) const;
 
+        [[nodiscard]]
+        std::vector<const SourceFile*> GetAllFiles() const;
+
     private:
         const SourceFile* RegisterFile(std::string name, std::string content);
         const SourceFile* GetFileUnlocked(std::string_view name) const noexcept;

@@ -47,6 +47,16 @@ namespace Rux {
         return GetFileUnlocked(name);
     }
 
+    std::vector<const SourceFile*> SourceManager::GetAllFiles() const {
+        std::shared_lock lock(rwMutex);
+        std::vector<const SourceFile*> result;
+        result.reserve(files.size());
+        for (const auto& file : files) {
+            result.push_back(file.get());
+        }
+        return result;
+    }
+
     const SourceFile* SourceManager::RegisterFile(std::string name,
                                                   std::string content) {
         std::unique_lock lock(rwMutex);
