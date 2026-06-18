@@ -3,14 +3,17 @@
 
 #pragma once
 
-#include "Rux/Ast.h"
-#include "Rux/Type.h"
+#include "Rux/Ast.h"   // for CallingConvention, *Module
+#include "Rux/Token.h" // for SourceLocation, TokenKind
+#include "Rux/Type.h"  // for TypeRef
 
-#include <filesystem>
-#include <memory>
-#include <optional>
-#include <string>
-#include <vector>
+#include <cstddef>    // for size_t
+#include <cstdint>    // for uint64_t
+#include <filesystem> // for path
+#include <memory>     // for unique_ptr
+#include <optional>   // for optional
+#include <string>     // for basic_string, string
+#include <vector>     // for vector
 
 namespace Rux {
 // Forward declarations

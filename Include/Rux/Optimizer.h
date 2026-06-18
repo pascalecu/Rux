@@ -1,17 +1,18 @@
 #pragma once
 
-#include "Rux/Hir.h"
+#include "Rux/Hir.h"  // for HirExprPtr, *HirExpr, *HirBlock, *HirFunc etc.
+#include "Rux/Type.h" // for TypeRef
 
-#include <cstdint>
-#include <optional>
-#include <unordered_map>
+#include <cstdint>       // for int64_t
+#include <optional>      // for optional
+#include <string>        // for basic_string, hash, string
+#include <unordered_map> // for unordered_map
 
 namespace Rux {
 
 class Optimizer {
 public:
     static void Run(HirPackage &package);
-
 
 private:
     static void OptimizeModule(HirModule &module);

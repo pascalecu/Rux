@@ -1,21 +1,21 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
-#include "Rux/Cli/Cli.h"
-#include "Rux/Platform/Defines.h"
-#include "Rux/Version.h"
+#include "Rux/Cli/Cli.h"          // for Cli
+#include "Rux/Platform/Defines.h" // for RUX_OS_WINDOWS
+#include "Rux/Version.h"          // for RUX_BUILD_DATE, RUX_BUILD_TIME, RUX_VERSION
 
-#include <algorithm>
-#include <array>
-#include <concepts>
-#include <cstdio>
-#include <functional>
-#include <iterator>
-#include <print>
-#include <ranges>
-#include <span>
-#include <string_view>
-#include <type_traits>
+#include <algorithm>   // for max, __any_of, any_of, __adjacent_find, __all_of, __is...
+#include <array>       // for array
+#include <concepts>    // for convertible_to
+#include <cstdio>      // for size_t, stderr
+#include <functional>  // for less, invoke, equal_to, identity
+#include <iterator>    // for size, indirect_result_t
+#include <print>       // for println, print
+#include <ranges>      // for input_range, iterator_t
+#include <span>        // for span
+#include <string>      // for char_traits
+#include <string_view> // for basic_string_view, string_view, operator<=>, operator==
 
 #if RUX_OS_WINDOWS
     #ifndef WIN32_LEAN_AND_MEAN
@@ -26,8 +26,9 @@
     #endif
     #include <windows.h>
 #else
-    #include <unistd.h>
+    #include <unistd.h> // for STDOUT_FILENO
     #if defined(__has_include)
+        // for winsize
         #if __has_include(<sys/termios.h>)
             #include <sys/termios.h>
         #elif __has_include(<termios.h>)
@@ -37,7 +38,7 @@
             #include <stropts.h>
         #endif
     #endif
-    #include <sys/ioctl.h>
+    #include <sys/ioctl.h> // for TIOCGWINSZ, ioctl
 #endif
 
 

@@ -3,13 +3,15 @@
 
 #pragma once
 
-#include "Rux/Ast.h"
+#include "Rux/Token.h" // for SourceLocation
 
-#include <filesystem>
-#include <string>
-#include <vector>
+#include <filesystem> // for path
+#include <string>     // for basic_string, string
+#include <vector>     // for vector
 
 namespace Rux {
+struct Module;
+
 struct SemaDiagnostic {
     enum class Severity {
         Warning,

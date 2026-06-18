@@ -3,7 +3,7 @@
 
 #include "Rux/Token.h"
 
-#include <unordered_map>
+#include <unordered_map>  // for unordered_map, operator==
 
 namespace Rux {
 TokenKind KeywordKind(std::string_view const text) noexcept {

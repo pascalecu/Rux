@@ -1,32 +1,32 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
-#include "Rux/Ast.h"
-#include "Rux/Cli/Cli.h"
-#include "Rux/Cli/CliInternals.h"
-#include "Rux/Hir.h"
-#include "Rux/Lexer.h"
-#include "Rux/Manifest.h"
-#include "Rux/Parser.h"
-#include "Rux/Platform/Defines.h"
-#include "Rux/Platform/Host.h"
-#include "Rux/Sema.h"
-#include "Rux/Version.h"
+#include "Rux/Ast.h"              // for Decl, UseDecl, Module, ModuleDecl
+#include "Rux/Cli/Cli.h"          // for GlobalOptions, Cli
+#include "Rux/Cli/CliInternals.h" // for DependencyPackageName, HostTargetTriple, PruneModuleFo...
+#include "Rux/Lexer.h"            // for LexerResult, LexerDiagnostic, Lexer
+#include "Rux/Manifest.h"         // for Dependency, Manifest, Package
+#include "Rux/Parser.h"           // for ParseResult, ParserDiagnostic, Parser
+#include "Rux/Platform/Defines.h" // for RUX_OS_WINDOWS
+#include "Rux/Platform/Types.h"   // for Platform
+#include "Rux/Sema.h"             // for DepPackage, SemaDiagnostic, Sema, SemaResult
+#include "Rux/SourceLoader.h"     // for SourceFile, SourceLoadResult, SourceLoader
+#include "Rux/Token.h"            // for Token, SourceLocation
 
-#include <algorithm>
-#include <chrono>
-#include <cstdint>
-#include <cstdio>
-#include <filesystem>
-#include <format>
-#include <functional>
-#include <print>
-#include <span>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
+#include <cstdio>        // for size_t, stderr, snprintf
+#include <filesystem>    // for path, operator/, exists
+#include <functional>    // for function
+#include <limits>        // for numeric_limits
+#include <memory>        // for unique_ptr
+#include <optional>      // for optional
+#include <print>         // for print
+#include <span>          // for span
+#include <string>        // for basic_string, char_traits, string, hash, allocator
+#include <string_view>   // for basic_string_view, operator==, string_view
+#include <unordered_map> // for unordered_map
+#include <unordered_set> // for unordered_set
+#include <utility>       // for move, get
+#include <vector>        // for vector
 
 /*
  * This is separate from the other ifdef because otherwise clang-format attempts

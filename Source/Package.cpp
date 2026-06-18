@@ -3,16 +3,18 @@
 
 #include "Rux/Package.h"
 
-#include "Rux/Manifest.h"
+#include "Rux/Manifest.h" // for Manifest, Package
 
-#include <algorithm>
-#include <expected>
-#include <filesystem>
-#include <fstream>
-#include <print>
-#include <ranges>
-#include <string_view>
-#include <vector>
+#include <algorithm>    // for all_of
+#include <cstdio>       // for stderr
+#include <expected>     // for unexpected, expected
+#include <filesystem>   // for path, operator/, exists, create_directories
+#include <format>       // for format
+#include <fstream>      // for basic_ofstream, basic_ostream, basic_ios, ios, ofstream
+#include <print>        // for println
+#include <string_view>  // for basic_string_view, string_view
+#include <system_error> // for error_code
+#include <vector>       // for vector
 
 namespace Rux {
 namespace fs = std::filesystem;

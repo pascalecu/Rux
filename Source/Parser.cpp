@@ -3,9 +3,13 @@
 
 #include "Rux/Parser.h"
 
-#include <cassert>
-#include <format>
-#include <fstream>
+#include "Rux/Lexer.h" // for LexerResult
+
+#include <cassert> // for assert
+#include <cctype>  // for isdigit
+#include <format>  // for format
+#include <fstream> // for basic_ostream, operator<<, basic_ofstream, ostream, ofstream
+#include <utility> // for move, pair, get
 
 namespace Rux {
 // ParseResult

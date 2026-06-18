@@ -1,9 +1,14 @@
 #include "Rux/Optimizer.h"
 
-#include <charconv>
-#include <memory>
-#include <optional>
-#include <string>
+#include "Rux/Token.h" // for TokenKind
+
+#include <charconv>     // for from_chars_result, from_chars
+#include <memory>       // for unique_ptr, make_unique
+#include <optional>     // for optional, nullopt, nullopt_t
+#include <string>       // for basic_string, hash, operator==, to_string
+#include <system_error> // for errc
+#include <utility>      // for move
+#include <vector>       // for vector
 
 namespace Rux {
 void Optimizer::Run(HirPackage &package) {

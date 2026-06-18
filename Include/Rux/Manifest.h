@@ -3,11 +3,13 @@
 
 #pragma once
 
-#include <filesystem>
-#include <map>
-#include <optional>
-#include <string>
-#include <vector>
+#include <filesystem>  // for path, current_path
+#include <map>         // for map
+#include <optional>    // for optional
+#include <string>      // for basic_string, string
+#include <string_view> // for string_view
+#include <utility>     // for pair
+#include <vector>      // for vector
 
 namespace Rux {
 /**

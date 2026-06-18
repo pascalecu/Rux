@@ -3,10 +3,13 @@
 
 #include "Rux/SourceLoader.h"
 
-#include <algorithm>
-#include <fstream>
-#include <print>
-#include <sstream>
+#include <algorithm> // for sort
+#include <cstdio>    // for stderr
+#include <format>    // for format
+#include <fstream>   // for basic_ifstream, basic_filebuf, ifstream, ostringstream
+#include <print>     // for print
+#include <sstream>   // for basic_ostringstream
+#include <utility>   // for move
 
 namespace Rux {
 std::optional<SourceLoadResult> SourceLoader::Load(std::filesystem::path const &manifestDir) {

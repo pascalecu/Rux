@@ -3,24 +3,20 @@
 
 #include "Rux/Linker.h"
 
-#include "Rux/Platform/Defines.h"
+#include "Rux/Platform/Defines.h" // for RUX_IS_SUNOS, RUX_IS_BSD, RUX_OS_NETBSD, RUX_OS_DRAGONFLY
 
-#include <algorithm>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <fstream>
-#include <map>
-#include <memory>
-#include <optional>
-#include <sstream>
-#include <system_error>
-#include <unordered_map>
-#include <unordered_set>
-
-#if RUX_IS_ELF_OS
-    #include <filesystem>
-#endif
+#include <algorithm>     // for min, sort
+#include <cstdlib>       // for size_t, getenv
+#include <cstring>       // for strlen
+#include <filesystem>    // for path, perms, operator/, operator|, perm_options, creat...
+#include <fstream>       // for basic_ofstream, basic_istream, basic_ios, fpos, ios
+#include <optional>      // for optional, nullopt, nullopt_t
+#include <sstream>       // for basic_stringstream
+#include <stdint.h>      // for uint64_t, uint32_t, uint8_t, uint16_t, int32_t
+#include <system_error>  // for error_code
+#include <unordered_map> // for unordered_map, operator==
+#include <unordered_set> // for unordered_set
+#include <utility>       // for move, get
 
 #if RUX_OS_WINDOWS
     // NOMINMAX: keep windows.h from defining min/max macros that would clobber the

@@ -3,13 +3,21 @@
 
 #include "Rux/Asm.h"
 
-#include <cstring>
-#include <format>
-#include <fstream>
-#include <sstream>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
+#include "Rux/Ast.h"  // for CallingConvention
+#include "Rux/Type.h" // for TypeRef
+
+#include <algorithm>     // for max, min
+#include <cstdint>       // for uint32_t, int32_t, uint64_t
+#include <cstring>       // for size_t, memcpy
+#include <format>        // for format
+#include <fstream>       // for basic_ostream, operator<<, basic_ofstream, ostringstream etc.
+#include <optional>      // for optional
+#include <sstream>       // for basic_ostringstream
+#include <string_view>   // for basic_string_view, string_view
+#include <unordered_map> // for unordered_map, operator==
+#include <unordered_set> // for unordered_set
+#include <utility>       // for pair, get, move
+#include <vector>        // for vector
 
 namespace Rux {
 // Type utilities

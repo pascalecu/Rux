@@ -3,14 +3,16 @@
 
 #pragma once
 
-#include "Rux/Hir.h"
-#include "Rux/Type.h"
+#include "Rux/Ast.h"  // for CallingConvention
+#include "Rux/Hir.h"  // for HirPackage
+#include "Rux/Type.h" // for TypeRef
 
-#include <cstdint>
-#include <filesystem>
-#include <optional>
-#include <string>
-#include <vector>
+#include <cstdint>    // for uint32_t
+#include <filesystem> // for path
+#include <optional>   // for optional
+#include <string>     // for basic_string, string
+#include <utility>    // for pair
+#include <vector>     // for vector
 
 namespace Rux {
 // Virtual register

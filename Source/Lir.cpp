@@ -3,14 +3,19 @@
 
 #include "Rux/Lir.h"
 
-#include "Rux/Optimizer.h"
+#include "Rux/Optimizer.h" // for Optimizer
+#include "Rux/Token.h"     // for TokenKind
 
-#include <format>
-#include <fstream>
-#include <optional>
-#include <string>
-#include <unordered_map>
-#include <utility>
+#include <algorithm>     // for min
+#include <cstddef>       // for size_t
+#include <format>        // for format
+#include <fstream>       // for basic_ofstream, basic_ostream, operator<<, ostream, ofstream
+#include <memory>        // for unique_ptr
+#include <optional>      // for optional, nullopt, nullopt_t
+#include <string>        // for basic_string, hash, operator==, char_traits, allocator, string
+#include <string_view>   // for basic_string_view, string_view
+#include <unordered_map> // for unordered_map, operator==
+#include <utility>       // for pair, move
 
 namespace Rux {
 // Internal helpers

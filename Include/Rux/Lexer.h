@@ -3,12 +3,15 @@
 
 #pragma once
 
-#include "Rux/Token.h"
+#include "Rux/Token.h" // for Token, SourceLocation
 
-#include <filesystem>
-#include <optional>
-#include <string>
-#include <vector>
+#include <cstddef>     // for size_t
+#include <cstdint>     // for uint32_t
+#include <filesystem>  // for path
+#include <optional>    // for optional
+#include <string>      // for string, basic_string
+#include <string_view> // for string_view
+#include <vector>      // for vector
 
 namespace Rux {
 struct LexerDiagnostic {
@@ -25,6 +28,7 @@ struct LexerDiagnostic {
 struct LexerResult {
     std::vector<Token> tokens;
     std::vector<LexerDiagnostic> diagnostics;
+
     [[nodiscard]] bool HasErrors() const noexcept;
 };
 
@@ -64,14 +68,20 @@ private:
 
     // Core scanning loop
     void ScanAll();
+
     Token NextToken();
 
     // Character helpers
     [[nodiscard]] bool IsAtEnd() const noexcept;
+
     [[nodiscard]] char Peek(std::size_t ahead = 0) const noexcept;
+
     char Advance() noexcept;
+
     void AdvanceUtf8CodePoint() noexcept;
+
     bool Match(char expected) noexcept;
+
     bool MatchStr(std::string_view s) noexcept;
 
     // Location tracking
@@ -79,11 +89,13 @@ private:
 
     // Whitespace / comments
     void SkipWhitespace();
+
     void SkipLineComment();  // // …
     void SkipBlockComment(); // /* … */  (supports nesting)
 
     // Scanners for each token family
     Token ScanIdent(SourceLocation start);
+
     Token ScanNumber(SourceLocation start); // int and float
     Token ScanString(SourceLocation start,
                      std::size_t prefixLen = 0); // "…" / c8"…" / c16"…" / c32"…"
@@ -94,14 +106,19 @@ private:
 
     // Literal helpers
     Token ScanIntLiteral(SourceLocation start, std::size_t tokenStart);
+
     Token ScanFloatSuffix(SourceLocation start, std::size_t tokenStart);
+
     void ConsumeNumberSuffix();
+
     std::string ScanEscapeSequence(); // inside string / char
 
     // Emit helpers
     [[nodiscard]] Token MakeToken(TokenKind kind, SourceLocation start,
                                   std::size_t tokenStart) const;
+
     void EmitError(SourceLocation loc, std::string message);
+
     void EmitWarning(SourceLocation loc, std::string message);
 };
 } // namespace Rux

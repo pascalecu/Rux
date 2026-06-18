@@ -3,22 +3,32 @@
 
 #include "Rux/Sema.h"
 
-#include "Rux/Lexer.h"
-#include "Rux/Platform/Host.h"
-#include "Rux/Type.h"
+#include "Rux/Ast.h"            // for Expr, TypeExpr, FuncDecl, CallExpr, Decl, Param, UseDecl
+#include "Rux/Lexer.h"          // for Lexer
+#include "Rux/Platform/Host.h"  // for HostOS
+#include "Rux/Platform/Types.h" // for ToString
+#include "Rux/Type.h"           // for TypeRef
 
-#include <algorithm>
-#include <cassert>
-#include <charconv>
-#include <format>
-#include <fstream>
-#include <limits>
-#include <memory>
-#include <optional>
-#include <unordered_map>
-#include <unordered_set>
+#include <algorithm>        // for min, max, __any_of, any_of
+#include <cassert>          // for assert
+#include <charconv>         // for from_chars_result, from_chars
+#include <cstddef>          // for size_t
+#include <cstdint>          // for uint64_t, int64_t, int16_t, int32_t, int8_t, uint32_t
+#include <format>           // for format
+#include <fstream>          // for basic_ofstream, operator<<, basic_ostream, ofstream
+#include <initializer_list> // for initializer_list
+#include <limits>           // for numeric_limits
+#include <memory>           // for unique_ptr, make_unique
+#include <optional>         // for optional, nullopt, nullopt_t
+#include <string_view>      // for basic_string_view, string_view, operator==
+#include <system_error>     // for errc
+#include <unordered_map>    // for unordered_map, operator==
+#include <unordered_set>    // for unordered_set
+#include <utility>          // for pair, move, get
 
 namespace Rux {
+class Scope;
+
 // TypeRef implementation
 bool TypeRef::IsNumeric() const noexcept {
     switch (kind) {

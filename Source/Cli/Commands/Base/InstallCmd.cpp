@@ -1,25 +1,23 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
-#include "Rux/Cli/Cli.h"
-#include "Rux/Cli/CliInternals.h"
-#include "Rux/Hir.h"
-#include "Rux/Manifest.h"
-#include "Rux/Platform/Defines.h"
-#include "Rux/Platform/Host.h"
-#include "Rux/Version.h"
+#include "Rux/Cli/Cli.h"          // for GlobalOptions, Cli
+#include "Rux/Cli/CliInternals.h" // for RegistryPackagesDir, DependencyPackageName, FetchUrl
+#include "Rux/Manifest.h"         // for Dependency, Manifest, ParsePackageSpec
+#include "Rux/Platform/Defines.h" // for RUX_OS_WINDOWS
+#include "Rux/Platform/Types.h"   // for Platform
 
-#include <algorithm>
-#include <chrono>
-#include <cstdint>
-#include <cstdio>
-#include <filesystem>
-#include <format>
-#include <print>
-#include <string>
-#include <string_view>
-#include <unordered_set>
-#include <vector>
+#include <cstdio>        // for stderr, size_t
+#include <filesystem>    // for path, operator/, exists, create_directories, remove_all
+#include <optional>      // for optional
+#include <print>         // for print
+#include <span>          // for span
+#include <string>        // for basic_string, char_traits, hash, string, operator==
+#include <string_view>   // for basic_string_view, operator==, string_view
+#include <system_error>  // for error_code
+#include <unordered_set> // for unordered_set
+#include <utility>       // for get
+#include <vector>        // for vector
 
 /*
  * This is separate from the other ifdef because otherwise clang-format attempts

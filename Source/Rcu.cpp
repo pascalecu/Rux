@@ -3,20 +3,24 @@
 
 #include "Rux/Rcu.h"
 
-#include "Rux/Version.h"
+#include "Rux/Ast.h"     // for CallingConvention
+#include "Rux/Type.h"    // for TypeRef
+#include "Rux/Version.h" // for RUX_VERSION
 
-#include <charconv>
-#include <chrono>
-#include <cstring>
-#include <format>
-#include <fstream>
-#include <limits>
-#include <optional>
-#include <sstream>
-#include <string_view>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
+#include <algorithm>     // for min, max
+#include <charconv>      // for from_chars_result, from_chars
+#include <chrono>        // for duration, duration_cast, seconds, system_clock
+#include <cstring>       // for size_t, memcpy
+#include <format>        // for format
+#include <fstream>       // for basic_ofstream, operator<<, basic_ios, ios, ofstream etc.
+#include <limits>        // for numeric_limits
+#include <optional>      // for optional, nullopt, nullopt_t
+#include <sstream>       // for basic_ostringstream
+#include <string_view>   // for basic_string_view, string_view, operator==
+#include <system_error>  // for errc
+#include <unordered_map> // for unordered_map, operator==
+#include <unordered_set> // for unordered_set
+#include <utility>       // for move, pair, get
 
 namespace Rux {
 namespace {

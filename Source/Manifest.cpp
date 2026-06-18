@@ -3,9 +3,9 @@
 
 #include "Rux/Manifest.h"
 
-#include <algorithm>
-#include <fstream>
-#include <ranges>
+#include <algorithm> // for find, find_if
+#include <cstddef>   // for size_t
+#include <fstream>   // for basic_ofstream, basic_ostream, operator<<, basic_ifstream, basic_is...
 
 namespace Rux {
 static constexpr std::string_view whitespace = " \t\r\n";

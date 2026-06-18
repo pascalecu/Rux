@@ -3,21 +3,26 @@
 
 #include "Rux/Hir.h"
 
-#include "Rux/Platform/Defines.h"
-#include "Rux/Version.h"
+#include "Rux/Platform/Defines.h" // for RUX_OS_WINDOWS, RUX_OS_LINUX
+#include "Rux/Version.h"          // for RUX_VERSION
 
-#include <algorithm>
-#include <cassert>
-#include <cctype>
-#include <charconv>
-#include <cstdint>
-#include <ctime>
-#include <format>
-#include <fstream>
-#include <limits>
-#include <optional>
-#include <string>
-#include <unordered_map>
+#include <algorithm>        // for min, max, remove
+#include <cassert>          // for assert
+#include <cctype>           // for isalnum
+#include <charconv>         // for from_chars_result, from_chars
+#include <cstdint>          // for uint64_t, int64_t, uint32_t, int16_t, int32_t, int8_t
+#include <ctime>            // for time_t, tm, strftime, time, localtime_r
+#include <format>           // for format
+#include <fstream>          // for basic_ofstream, basic_ostream, operator<<, ostream
+#include <initializer_list> // for initializer_list
+#include <limits>           // for numeric_limits
+#include <optional>         // for optional, nullopt, nullopt_t
+#include <string>           // for basic_string, hash, string, operator==, char_traits
+#include <string_view>      // for basic_string_view, string_view, operator==
+#include <system_error>     // for errc
+#include <unordered_map>    // for unordered_map, operator==
+#include <utility>          // for pair, move, get
+struct tm;
 
 namespace Rux {
 static bool LocalTime(std::time_t time, std::tm &out) {

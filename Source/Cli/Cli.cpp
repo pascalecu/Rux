@@ -3,39 +3,14 @@
 
 #include "Rux/Cli/Cli.h"
 
-#include "Rux/Asm.h"
-#include "Rux/Ast.h"
-#include "Rux/Cli/CliInternals.h"
-#include "Rux/Hir.h"
-#include "Rux/Lexer.h"
-#include "Rux/Linker.h"
-#include "Rux/Lir.h"
-#include "Rux/Manifest.h"
-#include "Rux/Package.h"
-#include "Rux/Parser.h"
-#include "Rux/Platform/Defines.h"
-#include "Rux/Platform/Host.h"
-#include "Rux/Rcu.h"
-#include "Rux/Sema.h"
-#include "Rux/Version.h"
+#include "Rux/Cli/CliInternals.h" // for Cli::ParseGlobalOptions, Misc
+#include "Rux/Platform/Defines.h" // for RUX_OS_WINDOWS
+#include "Rux/Platform/Types.h"   // for Platform
 
-#include <algorithm>
-#include <array>
-#include <chrono>
-#include <cmath>
-#include <cstddef>
-#include <cstdint>
-#include <cstdio>
-#include <filesystem>
-#include <format>
-#include <iomanip>
-#include <print>
-#include <sstream>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
+#include <cstddef>     // for size_t
+#include <string>      // for char_traits
+#include <string_view> // for basic_string_view, operator==, string_view
+#include <vector>      // for vector
 
 /*
  * This is separate from the other ifdef because otherwise clang-format attempts
@@ -62,8 +37,6 @@
     #include <sys/wait.h>
     #include <unistd.h>
 #endif
-
-#include "Rux/SourceLoader.h"
 
 using namespace Rux;
 using namespace Platform;

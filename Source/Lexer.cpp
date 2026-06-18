@@ -3,12 +3,14 @@
 
 #include "Rux/Lexer.h"
 
-#include <cassert>
-#include <cctype>
-#include <fstream>
-#include <ostream>
-#include <print>
-#include <sstream>
+#include <cassert> // for assert
+#include <cctype>  // for isdigit, isalnum, isalpha
+#include <format>  // for format
+#include <fstream> // for basic_ifstream, basic_ofstream, basic_ios, basic_filebuf, ios, ifstream
+#include <print>   // for print
+#include <sstream> // for basic_ostringstream
+#include <stdio.h> // for stderr
+#include <utility> // for move
 
 namespace Rux {
 static std::optional<std::uint32_t> DecodeUtf8CodePoint(std::string_view text) {
@@ -114,22 +116,30 @@ LexerResult Lexer::Tokenize() {
 }
 
 bool Lexer::DumpTokens(LexerResult const &result, std::filesystem::path const &path) {
-    std::ofstream f(path);
+    std::ofstream f(path, std::ios::binary);
     if (!f) {
         return false;
     }
+
+    auto write_line = [&](std::string_view s) {
+        f.write(s.data(), static_cast<std::streamsize>(s.size()));
+    };
+
     for (auto const &tok : result.tokens) {
-        std::print(f, "{:>4}:{:<4}  {:<16}  {}\n", tok.location.line, tok.location.column,
-                   std::string(TokenKindName(tok.kind)), tok.text);
+        write_line(std::format("{:>4}:{:<4}  {:<16}  {}\n", tok.location.line, tok.location.column,
+                               TokenKindName(tok.kind), tok.text));
     }
+
     if (!result.diagnostics.empty()) {
-        std::print(f, "\n--- diagnostics ---\n");
+        write_line("\n--- diagnostics ---\n");
+
         for (auto const &d : result.diagnostics) {
-            std::print(f, "{:>4}:{:<4}  {}  {}\n", d.location.line, d.location.column,
-                       d.severity == LexerDiagnostic::Severity::Error ? "error  " : "warning",
-                       d.message);
+            write_line(std::format(
+                "{:>4}:{:<4}  {}  {}\n", d.location.line, d.location.column,
+                d.severity == LexerDiagnostic::Severity::Error ? "error" : "warning", d.message));
         }
     }
+
     return f.good();
 }
 

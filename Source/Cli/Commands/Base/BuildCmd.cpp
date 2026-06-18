@@ -1,34 +1,38 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
-#include "Rux/Asm.h"
-#include "Rux/Ast.h"
-#include "Rux/Cli/Cli.h"
-#include "Rux/Cli/CliInternals.h"
-#include "Rux/Hir.h"
-#include "Rux/Lexer.h"
-#include "Rux/Linker.h"
-#include "Rux/Lir.h"
-#include "Rux/Manifest.h"
-#include "Rux/Parser.h"
-#include "Rux/Platform/Defines.h"
-#include "Rux/Platform/Host.h"
-#include "Rux/Rcu.h"
-#include "Rux/Sema.h"
-#include "Rux/Version.h"
+#include "Rux/Asm.h"              // for Asm
+#include "Rux/Ast.h"              // for Decl, UseDecl, Module, ModuleDecl
+#include "Rux/Cli/Cli.h"          // for GlobalOptions, Cli
+#include "Rux/Cli/CliInternals.h" // for BuildStats, ElapsedMs, LoadManifest, RequireManifest
+#include "Rux/Hir.h"              // for Hir, HirPackage
+#include "Rux/Lexer.h"            // for LexerResult, LexerDiagnostic, Lexer
+#include "Rux/Linker.h"           // for LinkerError, Linker
+#include "Rux/Lir.h"              // for Lir, LirPackage
+#include "Rux/Manifest.h"         // for Manifest, Package, Dependency, Build
+#include "Rux/Parser.h"           // for ParseResult, ParserDiagnostic, Parser
+#include "Rux/Platform/Defines.h" // for RUX_OS_WINDOWS
+#include "Rux/Platform/Host.h"    // for HostOS
+#include "Rux/Platform/Types.h"   // for OS
+#include "Rux/Rcu.h"              // for Rcu, RcuFile
+#include "Rux/Sema.h"             // for DepPackage, SemaDiagnostic, Sema, SemaResult
+#include "Rux/SourceLoader.h"     // for SourceFile, SourceLoadResult, SourceLoader
+#include "Rux/Token.h"            // for Token, SourceLocation
 
-#include <algorithm>
-#include <chrono>
-#include <cstdint>
-#include <cstdio>
-#include <filesystem>
-#include <format>
-#include <print>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
+#include <chrono>        // for steady_clock
+#include <cstdio>        // for stderr, size_t
+#include <filesystem>    // for path, operator/, create_directories, exists, relative
+#include <memory>        // for unique_ptr
+#include <optional>      // for optional
+#include <print>         // for print
+#include <span>          // for span
+#include <string>        // for basic_string, char_traits, hash, string, operator==
+#include <string_view>   // for basic_string_view, operator==, string_view
+#include <system_error>  // for error_code
+#include <unordered_map> // for unordered_map
+#include <unordered_set> // for unordered_set
+#include <utility>       // for move, get
+#include <vector>        // for vector
 
 /*
  * This is separate from the other ifdef because otherwise clang-format attempts
@@ -51,11 +55,9 @@
     #include <psapi.h>
 #else
     #include <sys/resource.h>
-    #include <sys/wait.h>
-    #include <unistd.h>
+    #include <sys/wait.h> // for waitpid
+    #include <unistd.h>   // for _exit, execv, fork
 #endif
-
-#include "Rux/SourceLoader.h"
 
 using namespace Rux;
 using namespace Platform;
