@@ -2,20 +2,19 @@ cmake_minimum_required(VERSION 3.31)
 project(Rux VERSION 0.3.1 LANGUAGES CXX)
 
 include(CTest)
+include(GNUInstallDirs)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Handle C++26 cleanly across all toolchains
 if (MSVC)
-    # Bypasses CMake feature tracking limits by directly enforcing MSVC's latest flag
     add_compile_options(/std:c++latest)
 else ()
     set(CMAKE_CXX_STANDARD 26)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_EXTENSIONS OFF)
 endif ()
 
-# Target libc++ specifically for Clang on Linux to support C++26 features like <print>
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT APPLE AND UNIX)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND UNIX AND NOT APPLE)
     add_compile_options(-stdlib=libc++)
     add_link_options(-stdlib=libc++)
 endif ()
@@ -29,9 +28,56 @@ configure_file(
         @ONLY
 )
 
-add_executable(rux
-        Source/Main.cpp
+add_library(rux_common INTERFACE)
+
+target_include_directories(rux_common INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Include
+        ${CMAKE_CURRENT_BINARY_DIR}/generated
+)
+
+add_library(rux_frontend STATIC
+        Source/Token.cpp
+        Source/Lexer.cpp
+        Source/Parser.cpp
+        Source/Sema.cpp
+)
+
+target_link_libraries(rux_frontend
+        PUBLIC rux_common
+)
+
+add_library(rux_ir STATIC
+        Source/Hir.cpp
+        Source/Lir.cpp
+        Source/Optimizer.cpp
+)
+
+target_link_libraries(rux_ir
+        PUBLIC rux_frontend
+)
+
+add_library(rux_backend STATIC
+        Source/Asm.cpp
+        Source/Linker.cpp
         Source/Platform.cpp
+        Source/Rcu.cpp
+)
+
+target_link_libraries(rux_backend
+        PUBLIC rux_ir
+)
+
+add_library(rux_tooling STATIC
+        Source/Manifest.cpp
+        Source/Package.cpp
+        Source/SourceLoader.cpp
+)
+
+target_link_libraries(rux_tooling
+        PUBLIC rux_backend
+)
+
+add_library(rux_cli STATIC
         Source/Cli/Cli.cpp
         Source/Cli/Commands/HelpCmd.cpp
         Source/Cli/Commands/Base/BuildCmd.cpp
@@ -39,40 +85,33 @@ add_executable(rux
         Source/Cli/Commands/Base/InstallCmd.cpp
         Source/Cli/Commands/Base/PackageCmd.cpp
         Source/Cli/Commands/Base/UtilityCmd.cpp
-        Source/Manifest.cpp
-        Source/Package.cpp
-        Source/Token.cpp
-        Source/Lexer.cpp
-        Source/SourceLoader.cpp
-        Source/Parser.cpp
-        Source/Sema.cpp
-        Source/Hir.cpp
-        Source/Lir.cpp
-        Source/Asm.cpp
-        Source/Rcu.cpp
-        Source/Linker.cpp
-        Source/Optimizer.cpp
 )
 
-# GCC/MinGW: link experimental libstdc++ extensions (needed for <print> support in some builds)
-if (MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_link_libraries(rux PRIVATE stdc++exp)
-endif ()
+target_link_libraries(rux_cli
+        PUBLIC rux_tooling
+)
 
-target_include_directories(rux PRIVATE
-        Include
-        ${CMAKE_CURRENT_BINARY_DIR}/generated
+add_executable(rux
+        Source/Main.cpp
+)
+
+target_link_libraries(rux
+        PRIVATE rux_cli
 )
 
 if (WIN32)
     target_link_libraries(rux PRIVATE Psapi Winhttp)
 endif ()
 
-set_property(TARGET rux
-        PROPERTY MSVC_RUNTIME_LIBRARY "$<IF:$<CONFIG:Release>,MultiThreaded,MultiThreadedDebugDLL>"
+if (MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(rux PRIVATE stdc++exp)
+endif ()
+
+set_property(TARGET rux PROPERTY
+        MSVC_RUNTIME_LIBRARY
+        "$<IF:$<CONFIG:Release>,MultiThreaded,MultiThreadedDebugDLL>"
 )
 
-include(GNUInstallDirs)
 install(TARGETS rux RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 if (BUILD_TESTING)
