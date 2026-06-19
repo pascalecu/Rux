@@ -1,5 +1,8 @@
-cmake_minimum_required(VERSION 3.31)
-project(Rux VERSION 0.3.1 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.31...4.3)
+project(Rux
+        VERSION 0.3.1
+        DESCRIPTION "The Rux Compiler"
+        LANGUAGES CXX)
 
 include(CTest)
 include(GNUInstallDirs)
