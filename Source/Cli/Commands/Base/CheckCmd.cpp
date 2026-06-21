@@ -13,13 +13,14 @@
 #include "Rux/SourceLoader.h"     // for SourceFile, SourceLoadResult, SourceLoader
 #include "Rux/Token.h"            // for Token, SourceLocation
 
-#include <cstdio>        // for size_t, stderr, snprintf
-#include <filesystem>    // for path, operator/, exists
-#include <functional>    // for function
-#include <limits>        // for numeric_limits
-#include <memory>        // for unique_ptr
-#include <optional>      // for optional
-#include <print>         // for print
+#include <cstdio>     // for size_t, stderr, snprintf
+#include <filesystem> // for path, operator/, exists
+#include <functional> // for function
+#include <limits>     // for numeric_limits
+#include <memory>     // for unique_ptr
+#include <optional>   // for optional
+#include <print>      // for print
+#include <ranges>
 #include <span>          // for span
 #include <string>        // for basic_string, char_traits, string, hash, allocator
 #include <string_view>   // for basic_string_view, operator==, string_view
@@ -48,12 +49,8 @@
 #if RUX_OS_WINDOWS
     #include <psapi.h>
 #else
-    #include <sys/resource.h>
     #include <sys/wait.h>
-    #include <unistd.h>
 #endif
-
-#include "Rux/SourceLoader.h"
 
 using namespace Rux;
 using namespace Platform;
@@ -79,14 +76,12 @@ struct ImportCollector {
 
     void collect(Decl const &decl) {
         if (auto const *ud = dynamic_cast<UseDecl const *>(&decl)) {
-            if (!DeclMatchesTarget(*ud, target)) {
-                return;
-            }
-            if (!ud->path.empty()) {
-                imports.push_back(ud->path[0]);
+            if (DeclMatchesTarget(*ud, target) and !ud->path.empty()) {
+                imports.push_back(ud->path.front());
             }
             return;
         }
+
         if (auto const *mod = dynamic_cast<ModuleDecl const *>(&decl)) {
             for (auto const &item : mod->items) {
                 if (item) {
@@ -98,22 +93,23 @@ struct ImportCollector {
 };
 
 struct DependencyQueue {
-    std::string const pkgName;
-    Manifest const ownerManifest;
-    std::filesystem::path const ownerRoot;
-    std::unordered_set<std::string> queuedPackageNames;
-    std::vector<PendingPackage> pendingPackages;
-    std::string targetName;
+    std::string_view pkgName;
+    Manifest const &ownerManifest;
+    std::filesystem::path const &ownerRoot;
+    std::unordered_set<std::string> &queuedPackageNames;
+    std::vector<PendingPackage> &pendingPackages;
+    std::string_view targetName;
 };
 
-auto JsonEscape(std::string_view s) -> std::string {
+using DiagnosticEmitter =
+    std::function<void(std::string_view, int, int, std::string_view, std::string_view)>;
+
+[[nodiscard]] auto JsonEscape(std::string_view s) -> std::string {
     std::string out;
-    if (s.size() < ((std::numeric_limits<size_t>::max)() - 128)) {
-        out.reserve(s.size() + (s.size() / 10) + 16);
-    }
-    for (char ch : s) {
-        unsigned char u_ch = static_cast<unsigned char>(ch);
-        switch (u_ch) {
+    out.reserve(s.size() + (s.size() / 10) + 16);
+
+    for (char const ch : s) {
+        switch (auto const u_ch = static_cast<unsigned char>(ch)) {
         case '"':
             out += "\\\"";
             break;
@@ -135,63 +131,53 @@ auto JsonEscape(std::string_view s) -> std::string {
         case '\t':
             out += "\\t";
             break;
-        default: {
+        default:
             if (u_ch < 0x20) {
-                char buf[7];
-                std::snprintf(buf, sizeof(buf), "\\u%04x", u_ch);
-                out += buf;
+                out += std::format("\\u{:04x}", u_ch);
             }
             else {
                 out += ch;
             }
             break;
         }
-        }
     }
     return out;
 }
 
-auto enqueueDependency(
-    DependencyQueue &queue,
-    std::function<void(std::string, int, int, std::string, std::string)> const &EmitDiag) -> bool {
-    if (queue.queuedPackageNames.count(queue.pkgName)) {
+[[nodiscard]] auto EnqueueDependency(DependencyQueue const &queue,
+                                     DiagnosticEmitter const &EmitDiag) -> bool {
+    if (queue.queuedPackageNames.contains(std::string{queue.pkgName})) {
         return true;
     }
 
-    auto const deps = queue.ownerManifest.EffectiveDependencies(queue.targetName);
-    std::optional<Rux::Dependency> targetDep; // Add Rux:: here
+    auto const deps = queue.ownerManifest.EffectiveDependencies(std::string{queue.targetName});
+    auto const it = std::ranges::find(deps, queue.pkgName, &Dependency::name);
 
-    for (auto const &d : deps) {
-        if (d.name == queue.pkgName) {
-            targetDep = d;
-            break;
-        }
-    }
-
-    if (!targetDep) {
+    if (it == deps.end()) {
         EmitDiag("", 0, 0, "error",
-                 "package '" + queue.pkgName + "' is not listed in [Dependencies]");
+                 std::format("package '{}' is not listed in [Dependencies]", queue.pkgName));
         return false;
     }
 
+    auto const &targetDep = *it;
     std::filesystem::path depRoot;
-    if (targetDep->path.empty()) {
-        depRoot = RegistryPackagesDir() / DependencyPackageName(*targetDep);
+
+    if (targetDep.path.empty()) {
+        depRoot = RegistryPackagesDir() / DependencyPackageName(targetDep);
         if (!std::filesystem::exists(depRoot)) {
             EmitDiag("", 0, 0, "error",
-                     "package '" + DependencyPackageName(*targetDep) +
-                         "' is not installed — run 'rux install'");
+                     std::format("package '{}' is not installed — run 'rux install'",
+                                 DependencyPackageName(targetDep)));
             return false;
         }
     }
     else {
-        depRoot = (queue.ownerRoot / targetDep->path).lexically_normal();
-
-        auto rel = depRoot.lexically_relative(queue.ownerRoot);
-        if (!rel.empty() and rel.begin()->string() == "..") {
+        depRoot = (queue.ownerRoot / targetDep.path).lexically_normal();
+        if (auto const rel = depRoot.lexically_relative(queue.ownerRoot);
+            !rel.empty() and *rel.begin() == "..") {
             EmitDiag("", 0, 0, "error",
-                     "package '" + queue.pkgName +
-                         "' contains an invalid path escaping root bounds");
+                     std::format("package '{}' contains an invalid path escaping root bounds",
+                                 queue.pkgName));
             return false;
         }
     }
@@ -199,105 +185,103 @@ auto enqueueDependency(
     auto depManifest = Manifest::Load(depRoot / "Rux.toml");
     if (!depManifest) {
         EmitDiag("", 0, 0, "error",
-                 "dependency package '" + queue.pkgName + "' was not found at '" +
-                     depRoot.string() + "'");
+                 std::format("dependency package '{}' was not found at '{}'", queue.pkgName,
+                             depRoot.string()));
         return false;
     }
 
-    queue.queuedPackageNames.insert(queue.pkgName);
-    queue.pendingPackages.push_back({targetDep->name, depRoot, std::move(*depManifest)});
+    queue.queuedPackageNames.emplace(queue.pkgName);
+    queue.pendingPackages.emplace_back(targetDep.name, std::move(depRoot), std::move(*depManifest));
     return true;
 }
 
-int HandleJsonOutput(bool const hadErrors, std::vector<JsonDiagnostic> const &jsonDiags) {
-    std::print("{{\n");
-    std::print("  \"success\": {},\n", hadErrors ? "false" : "true");
-    std::print("  \"diagnostics\": [\n");
+[[nodiscard]] int HandleJsonOutput(bool const hadErrors,
+                                   std::span<JsonDiagnostic const> jsonDiags) {
+    std::println("{{");
+    std::println("  \"success\": {},", !hadErrors);
+    std::println("  \"diagnostics\": [");
 
     for (std::size_t i = 0; i < jsonDiags.size(); ++i) {
-        auto const &d = jsonDiags[i];
-        std::print("    {{");
-        std::print("\"file\":\"{}\",", JsonEscape(d.file));
-        std::print("\"line\":{},", d.line);
-        std::print("\"column\":{},", d.column);
-        std::print("\"severity\":\"{}\",", JsonEscape(d.severity));
-        std::print("\"message\":\"{}\"", JsonEscape(d.message));
-        std::print("}}{}\n", (i + 1 < jsonDiags.size()) ? "," : "");
+        auto const &[file, line, column, severity, message] = jsonDiags[i];
+        std::print("    "
+                   "{{\"file\":\"{}\",\"line\":{},\"column\":{},\"severity\":\"{}\",\"message\":\"{"
+                   "}\"}}{}\n",
+                   JsonEscape(file), line, column, JsonEscape(severity), JsonEscape(message),
+                   (i + 1 < jsonDiags.size()) ? "," : "");
     }
 
-    std::print("  ]\n");
-    std::print("}}\n");
+    std::println("  ]");
+    std::println("}}");
     return hadErrors ? 1 : 0;
 }
 
-void HandleErrors(
-    bool &hadErrors, std::vector<ParseResult> const &parseResults,
-    std::vector<ParseResult> const &depParseResults, std::vector<std::string> const &loadedPackages,
-    std::vector<std::string> const &loadedModuleNames, Manifest const &manifest,
-    std::string const &targetName,
-    std::function<void(std::string, int, int, std::string, std::string)> const &EmitDiag) {
+[[nodiscard]] auto HandleErrors(std::span<ParseResult const> parseResults,
+                                std::span<ParseResult const> depParseResults,
+                                std::span<std::string const> loadedPackages,
+                                std::span<std::string const> loadedModuleNames,
+                                Manifest const &manifest, std::string const &targetName,
+                                DiagnosticEmitter const &EmitDiag) -> bool {
     std::vector<Module const *> userModules;
     userModules.reserve(parseResults.size());
-    for (auto const &pr : parseResults) {
-        userModules.push_back(&pr.module);
+    for (auto const &[module, _] : parseResults) {
+        userModules.push_back(&module);
     }
 
     std::vector<DepPackage> depPackages;
-    std::unordered_map<std::string, std::size_t> pkgIdx;
-    for (std::size_t i = 0; i < depParseResults.size(); ++i) {
-        std::string const &pkgName = loadedPackages[i];
+    std::unordered_map<std::string_view, std::size_t> pkgIdx;
+
+    for (std::size_t i = 0; i < loadedPackages.size(); ++i) {
+        std::string_view const pkgName = loadedPackages[i];
         auto [it, inserted] = pkgIdx.emplace(pkgName, depPackages.size());
         if (inserted) {
-            depPackages.push_back({pkgName, {}});
+            depPackages.push_back({std::string(pkgName), {}});
         }
-        depPackages[it->second].modules.push_back(
-            {loadedModuleNames[i], &depParseResults[i].module});
+        depPackages[it->second].modules.emplace_back(loadedModuleNames[i],
+                                                     &depParseResults[i].module);
     }
 
     Sema sema(std::move(userModules), std::move(depPackages), manifest.package.name,
               std::string(TargetOsName(targetName)));
     auto semaResult = sema.Analyze();
 
-    for (auto const &diag : semaResult.diagnostics) {
-        auto const &loc = diag.location;
-        char const *sev = diag.severity == SemaDiagnostic::Severity::Error ? "error" : "warning";
-        EmitDiag(diag.sourceName, static_cast<int>(loc.line), static_cast<int>(loc.column), sev,
-                 diag.message);
-        if (diag.severity == SemaDiagnostic::Severity::Error) {
+    bool hadErrors = semaResult.HasErrors();
+    for (auto const &[severity, sourceName, location, message] : semaResult.diagnostics) {
+        auto const &loc = location;
+        std::string_view sev = severity == SemaDiagnostic::Severity::Error ? "error" : "warning";
+        EmitDiag(sourceName, static_cast<int>(loc.line), static_cast<int>(loc.column), sev,
+                 message);
+        if (severity == SemaDiagnostic::Severity::Error) {
             hadErrors = true;
         }
     }
 
-    if (semaResult.HasErrors()) {
-        hadErrors = true;
-    }
+    return !hadErrors;
 }
 
-int HandlePendingIndex(
-    bool &hadErrors, GlobalOptions const &opts, bool jsonOutput,
-    std::vector<PendingPackage> &pendingPackages, std::string const &targetName,
-    std::vector<std::string> &imports, ImportCollector &collector,
+[[nodiscard]] auto ProcessPendingIndex(
+    GlobalOptions const &opts, bool jsonOutput, std::vector<PendingPackage> &pendingPackages,
+    std::string const &targetName, std::vector<std::string> &imports, ImportCollector &collector,
     std::vector<ParseResult> &depParseResults, std::vector<std::string> &loadedPackages,
     std::vector<std::string> &loadedModuleNames,
-    std::unordered_set<std::string> &queuedPackageNames,
-    std::function<void(std::string, int, int, std::string, std::string)> const &EmitDiag) {
+    std::unordered_set<std::string> &queuedPackageNames, DiagnosticEmitter const &EmitDiag)
+    -> bool {
     for (std::size_t pendingIndex = 0; pendingIndex < pendingPackages.size(); ++pendingIndex) {
-        auto const &pendingPkg = pendingPackages[pendingIndex];
+        std::string currentPkgName = pendingPackages[pendingIndex].name;
+        std::filesystem::path currentPkgRoot = pendingPackages[pendingIndex].root;
+        Manifest currentManifest = pendingPackages[pendingIndex].manifest;
 
         if (opts.verbose and !jsonOutput) {
-            std::print(" Loading package {} from {}\n", pendingPkg.name, pendingPkg.root.string());
+            std::println(" Loading package {} from {}", currentPkgName, currentPkgRoot.string());
         }
 
-        auto depLoadResult = SourceLoader::Load(pendingPkg.root);
+        auto depLoadResult = SourceLoader::Load(currentPkgRoot);
         if (!depLoadResult) {
-            hadErrors = true;
-            break;
-        };
+            return false;
+        }
 
         for (auto const &error : depLoadResult->errors) {
             if (jsonOutput) {
                 EmitDiag("", 0, 0, "error", error);
-                hadErrors = true;
             }
             else {
                 std::print(stderr, "{}", error);
@@ -305,59 +289,59 @@ int HandlePendingIndex(
         }
 
         if (!depLoadResult->errors.empty()) {
-            hadErrors = true;
-            break;
+            return false;
         }
 
         std::vector<ParseResult> packageParseResults;
         packageParseResults.reserve(depLoadResult->files.size());
+        bool parseErrors = false;
 
-        for (auto const &depFile : depLoadResult->files) {
-            Lexer depLexer(depFile.source, depFile.path.string());
+        for (auto const &[path, source] : depLoadResult->files) {
+            Lexer depLexer(source, path.string());
             auto depLex = depLexer.Tokenize();
 
-            for (auto const &diag : depLex.diagnostics) {
-                char const *sev =
-                    diag.severity == LexerDiagnostic::Severity::Error ? "error" : "warning";
-                EmitDiag(depFile.path.string(), static_cast<int>(diag.location.line),
-                         static_cast<int>(diag.location.column), sev, diag.message);
-                if (diag.severity == LexerDiagnostic::Severity::Error) {
-                    hadErrors = true;
+            for (auto const &[severity, location, message] : depLex.diagnostics) {
+                std::string_view sev =
+                    severity == LexerDiagnostic::Severity::Error ? "error" : "warning";
+                EmitDiag(path.string(), static_cast<int>(location.line),
+                         static_cast<int>(location.column), sev, message);
+                if (severity == LexerDiagnostic::Severity::Error) {
+                    parseErrors = true;
                 }
             }
             if (depLex.HasErrors()) {
-                hadErrors = true;
+                parseErrors = true;
                 break;
             }
 
-            Parser depParser(std::move(depLex.tokens), depFile.path.string());
+            Parser depParser(std::move(depLex.tokens), path.string());
             auto depParse = depParser.Parse();
 
-            for (auto const &diag : depParse.diagnostics) {
-                char const *sev =
-                    diag.severity == ParserDiagnostic::Severity::Error ? "error" : "warning";
-                EmitDiag(depFile.path.string(), static_cast<int>(diag.location.line),
-                         static_cast<int>(diag.location.column), sev, diag.message);
-                if (diag.severity == ParserDiagnostic::Severity::Error) {
-                    hadErrors = true;
+            for (auto const &[severity, location, message] : depParse.diagnostics) {
+                std::string_view sev =
+                    severity == ParserDiagnostic::Severity::Error ? "error" : "warning";
+                EmitDiag(path.string(), static_cast<int>(location.line),
+                         static_cast<int>(location.column), sev, message);
+                if (severity == ParserDiagnostic::Severity::Error) {
+                    parseErrors = true;
                 }
             }
             if (depParse.HasErrors()) {
-                hadErrors = true;
+                parseErrors = true;
                 break;
             }
-            PruneModuleForTarget(depParse.module, targetName);
 
+            PruneModuleForTarget(depParse.module, targetName);
             packageParseResults.push_back(std::move(depParse));
         }
 
-        if (hadErrors) {
-            break;
+        if (parseErrors) {
+            return false;
         }
 
         imports.clear();
-        for (auto const &pr : packageParseResults) {
-            for (auto const &decl : pr.module.items) {
+        for (auto const &[module, _] : packageParseResults) {
+            for (auto const &decl : module.items) {
                 if (decl) {
                     collector.collect(*decl);
                 }
@@ -365,26 +349,20 @@ int HandlePendingIndex(
         }
 
         for (auto const &pkgName : imports) {
-            auto const &currentPkg = pendingPackages[pendingIndex];
-            if (pkgName == currentPkg.manifest.package.name or pkgName == currentPkg.name) {
+            if (pkgName == currentManifest.package.name or pkgName == currentPkgName) {
                 continue;
             }
 
             DependencyQueue depQueue{.pkgName = pkgName,
-                                     .ownerManifest = currentPkg.manifest,
-                                     .ownerRoot = currentPkg.root,
+                                     .ownerManifest = currentManifest,
+                                     .ownerRoot = currentPkgRoot,
                                      .queuedPackageNames = queuedPackageNames,
                                      .pendingPackages = pendingPackages,
                                      .targetName = targetName};
 
-            if (!enqueueDependency(depQueue, EmitDiag)) {
-                hadErrors = true;
-                break;
+            if (!EnqueueDependency(depQueue, EmitDiag)) {
+                return false;
             }
-        }
-
-        if (hadErrors) {
-            break;
         }
 
         for (auto &depParse : packageParseResults) {
@@ -393,76 +371,66 @@ int HandlePendingIndex(
             loadedPackages.push_back(pendingPackages[pendingIndex].name);
         }
     }
-    return 0;
+    return true;
 }
 
 int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &opts) {
     bool jsonOutput = false;
     std::string_view target;
 
-    for (std::size_t i = 0; i < args.size(); ++i) {
-        std::string_view arg = args[i];
-
-        if (arg == "-q" or arg == "--quiet") {
+    for (auto it = args.begin(); it != args.end(); ++it) {
+        if (*it == "-q" or *it == "--quiet" or *it == "-v" or *it == "--verbose") {
             continue;
         }
-        if (arg == "-v" or arg == "--verbose") {
-            continue;
-        }
-
-        if (arg == "--json") {
+        if (*it == "--json") {
             jsonOutput = true;
             continue;
         }
-
-        if (arg == "--target" and i + 1 < args.size()) {
-            target = args[++i];
+        if (*it == "--target" and std::next(it) != args.end()) {
+            target = *++it;
             continue;
         }
-
-        if (arg == "-h" or arg == "--help") {
+        if (*it == "-h" or *it == "--help") {
             PrintHelpFor("check");
             return 0;
         }
-
-        PrintUnknownOption(arg, "check");
+        PrintUnknownOption(*it, "check");
         return 1;
     }
 
     std::vector<JsonDiagnostic> jsonDiags;
-    bool hadErrors = false;
+    bool hasFatalError = false;
 
-    auto EmitDiag = [&](std::string file, int line, int column, std::string severity,
-                        std::string message) {
+    auto EmitDiag = [&](std::string_view file, int line, int column, std::string_view severity,
+                        std::string_view message) {
         if (jsonOutput) {
-            jsonDiags.push_back(
-                {std::move(file), line, column, std::move(severity), std::move(message)});
+            jsonDiags.emplace_back(std::string{file}, line, column, std::string{severity},
+                                   std::string{message});
         }
         else {
             if (file.empty()) {
-                std::print(stderr, "error: {}\n", message);
+                std::println(stderr, "error: {}", message);
             }
             else {
-                std::print(stderr, "{}:{}:{}: {}: {}\n", file, line, column, severity, message);
+                std::println(stderr, "{}:{}:{}: {}: {}", file, line, column, severity, message);
             }
         }
     };
 
-    auto EmitFatal = [&](std::string message) {
-        EmitDiag("", 0, 0, "error", std::move(message));
-        hadErrors = true;
+    auto EmitFatal = [&](std::string_view const message) {
+        EmitDiag("", 0, 0, "error", message);
+        hasFatalError = true;
     };
 
-    auto manifestPath = RequireManifest();
+    auto const manifestPath = RequireManifest();
     if (!manifestPath) {
         if (jsonOutput) {
-            EmitFatal("could not find 'Rux.toml' in current directory or any "
-                      "parent directory");
+            EmitFatal("could not find 'Rux.toml' in current directory or any parent directory");
         }
         return 1;
     }
 
-    auto manifest = LoadManifest(*manifestPath);
+    auto const manifest = LoadManifest(*manifestPath);
     if (!manifest) {
         if (jsonOutput) {
             EmitFatal("failed to parse 'Rux.toml'");
@@ -473,37 +441,34 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
     std::string targetName = target.empty() ? HostTargetTriple() : std::string(target);
     if (!IsSupportedTargetTriple(targetName)) {
         if (jsonOutput) {
-            EmitFatal("unsupported target '" + targetName + "'");
+            EmitFatal(std::format("unsupported target '{}'", targetName));
         }
         else {
             std::print(stderr,
-                       "error: unsupported target '{}'; supported targets are "
-                       "linux-x64, windows-x64, macos-x64, macos-aarch64, "
-                       "freebsd-x64, openbsd-x64, netbsd-x64, dragonfly-x64, "
-                       "illumos-x64\n",
+                       "error: unsupported target '{}'; supported targets are linux-x64, "
+                       "windows-x64, macos-x64, macos-aarch64, freebsd-x64, openbsd-x64, "
+                       "netbsd-x64, dragonfly-x64, illumos-x64\n",
                        targetName);
         }
         return 1;
     }
 
-    std::string const hostTarget = HostTargetTriple();
-    if (hostTarget != "unknown" and targetName != hostTarget) {
+    if (std::string const hostTarget = HostTargetTriple();
+        hostTarget != "unknown" and targetName != hostTarget) {
+        constexpr std::string_view err =
+            "cross-target build from '{}' to '{}' is not supported yet";
         if (jsonOutput) {
-            EmitFatal("cross-target build from '" + hostTarget + "' to '" + targetName +
-                      "' is not supported yet");
+            EmitFatal(std::format(err, hostTarget, targetName));
         }
         else {
-            std::print(stderr,
-                       "error: cross-target build from '{}' to '{}' is not "
-                       "supported yet\n",
-                       hostTarget, targetName);
+            std::println(stderr, "error: {}", std::format(err, hostTarget, targetName));
         }
         return 1;
     }
 
     if (!opts.quiet and !jsonOutput) {
-        std::print("Checking {} v{} [{}]\n", manifest->package.name, manifest->package.version,
-                   manifestPath->parent_path().string());
+        std::println("Checking {} v{} [{}]", manifest->package.name, manifest->package.version,
+                     manifestPath->parent_path().string());
     }
 
     auto loadResult = SourceLoader::Load(manifestPath->parent_path());
@@ -517,50 +482,45 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
     for (auto const &err : loadResult->errors) {
         if (jsonOutput) {
             EmitDiag("", 0, 0, "error", err);
-            hadErrors = true;
+            hasFatalError = true;
         }
         else {
             std::print(stderr, "{}", err);
         }
     }
 
-    bool lexErrors = false;
+    bool fileErrors = false;
     std::vector<LexerResult> lexResults;
     lexResults.reserve(loadResult->files.size());
 
-    for (auto const &file : loadResult->files) {
+    for (auto const &[path, source] : loadResult->files) {
         if (opts.verbose and !jsonOutput) {
-            std::print("    Lexing {}\n", file.path.string());
+            std::println("    Lexing {}", path.string());
         }
 
-        Lexer lexer(file.source, file.path.string());
+        Lexer lexer(source, path.string());
         auto lexResult = lexer.Tokenize();
 
-        for (auto const &diag : lexResult.diagnostics) {
-            auto const &loc = diag.location;
-            char const *sev =
-                diag.severity == LexerDiagnostic::Severity::Error ? "error" : "warning";
-            EmitDiag(file.path.string(), static_cast<int>(loc.line), static_cast<int>(loc.column),
-                     sev, diag.message);
-            if (diag.severity == LexerDiagnostic::Severity::Error) {
-                lexErrors = true;
+        for (auto const &[severity, location, message] : lexResult.diagnostics) {
+            std::string_view sev =
+                severity == LexerDiagnostic::Severity::Error ? "error" : "warning";
+            EmitDiag(path.string(), static_cast<int>(location.line),
+                     static_cast<int>(location.column), sev, message);
+            if (severity == LexerDiagnostic::Severity::Error) {
+                fileErrors = true;
             }
         }
         lexResults.push_back(std::move(lexResult));
     }
 
-    if (lexErrors) {
-        hadErrors = true;
-    }
-
-    bool parseErrors = false;
     std::vector<ParseResult> parseResults;
     parseResults.reserve(loadResult->files.size());
 
     for (std::size_t fileIndex = 0; fileIndex < loadResult->files.size(); ++fileIndex) {
-        auto const &file = loadResult->files[fileIndex];
+        auto const &[path, source] = loadResult->files[fileIndex];
+
         if (opts.verbose and !jsonOutput) {
-            std::print("    Parsing {}\n", file.path.string());
+            std::println("    Parsing {}", path.string());
         }
 
         auto &lexResult = lexResults[fileIndex];
@@ -568,17 +528,16 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
             continue;
         }
 
-        Parser parser(std::move(lexResult.tokens), file.path.string());
+        Parser parser(std::move(lexResult.tokens), path.string());
         auto parseResult = parser.Parse();
 
-        for (auto const &diag : parseResult.diagnostics) {
-            auto const &loc = diag.location;
-            char const *sev =
-                diag.severity == ParserDiagnostic::Severity::Error ? "error" : "warning";
-            EmitDiag(file.path.string(), static_cast<int>(loc.line), static_cast<int>(loc.column),
-                     sev, diag.message);
-            if (diag.severity == ParserDiagnostic::Severity::Error) {
-                parseErrors = true;
+        for (auto const &[severity, location, message] : parseResult.diagnostics) {
+            std::string_view sev =
+                severity == ParserDiagnostic::Severity::Error ? "error" : "warning";
+            EmitDiag(path.string(), static_cast<int>(location.line),
+                     static_cast<int>(location.column), sev, message);
+            if (severity == ParserDiagnostic::Severity::Error) {
+                fileErrors = true;
             }
         }
 
@@ -588,24 +547,20 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
         }
     }
 
-    if (parseErrors) {
-        hadErrors = true;
-    }
+    hasFatalError |= fileErrors;
 
     std::vector<ParseResult> depParseResults;
     std::vector<std::string> loadedPackages;
     std::vector<std::string> loadedModuleNames;
-
     std::vector<PendingPackage> pendingPackages;
     std::unordered_set<std::string> queuedPackageNames;
-
     std::vector<std::string> imports;
 
     ImportCollector collector{imports, targetName};
 
-    for (auto const &pr : parseResults) {
+    for (auto const &[module, _] : parseResults) {
         imports.clear();
-        for (auto const &decl : pr.module.items) {
+        for (auto const &decl : module.items) {
             if (decl) {
                 collector.collect(*decl);
             }
@@ -623,27 +578,27 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
                                      .pendingPackages = pendingPackages,
                                      .targetName = targetName};
 
-            if (!enqueueDependency(depQueue, EmitDiag)) {
-                hadErrors = true;
+            if (!EnqueueDependency(depQueue, EmitDiag)) {
+                hasFatalError = true;
                 break;
             }
         }
     }
 
-    if (!hadErrors) {
-        HandlePendingIndex(hadErrors, opts, jsonOutput, pendingPackages, targetName, imports,
-                           collector, depParseResults, loadedPackages, loadedModuleNames,
-                           queuedPackageNames, EmitDiag);
+    if (!hasFatalError and !ProcessPendingIndex(opts, jsonOutput, pendingPackages, targetName,
+                                                imports, collector, depParseResults, loadedPackages,
+                                                loadedModuleNames, queuedPackageNames, EmitDiag)) {
+        hasFatalError = true;
     }
 
-    if (!hadErrors) {
-        HandleErrors(hadErrors, parseResults, depParseResults, loadedPackages, loadedModuleNames,
-                     *manifest, targetName, EmitDiag);
+    if (!hasFatalError and !HandleErrors(parseResults, depParseResults, loadedPackages,
+                                         loadedModuleNames, *manifest, targetName, EmitDiag)) {
+        hasFatalError = true;
     }
 
     if (jsonOutput) {
-        return HandleJsonOutput(hadErrors, jsonDiags);
+        return HandleJsonOutput(hasFatalError, jsonDiags);
     }
 
-    return hadErrors ? 1 : 0;
+    return hasFatalError ? 1 : 0;
 }
