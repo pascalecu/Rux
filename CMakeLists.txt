@@ -57,7 +57,6 @@ target_link_libraries(rux_ir
 add_library(rux_backend STATIC
         Source/Asm.cpp
         Source/Linker.cpp
-        Source/Platform.cpp
         Source/Rcu.cpp
 )
 
