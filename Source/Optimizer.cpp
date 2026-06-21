@@ -119,12 +119,12 @@ void Optimizer::OptimizeExpr(HirExprPtr &expr) {
 
 bool Optimizer::IsIntegerLiteral(HirExpr const *expr) {
     auto const *lit = dynamic_cast<HirLiteralExpr const *>(expr);
-    return lit && lit->type.IsInteger();
+    return lit and lit->type.IsInteger();
 }
 
 bool Optimizer::IsBoolLiteral(HirExpr const *expr) {
     auto const *lit = dynamic_cast<HirLiteralExpr const *>(expr);
-    return lit && lit->type.IsBool();
+    return lit and lit->type.IsBool();
 }
 
 std::optional<std::int64_t> Optimizer::GetIntegerLiteral(HirExpr const *expr) {
@@ -156,7 +156,7 @@ HirExprPtr Optimizer::MakeIntegerLiteral(std::int64_t value, TypeRef const &type
     return lit;
 }
 
-HirExprPtr Optimizer::MakeBoolLiteral(bool value, TypeRef const &type) {
+HirExprPtr Optimizer::MakeBoolLiteral(bool const value, TypeRef const &type) {
     auto lit = std::make_unique<HirLiteralExpr>();
     lit->type = type;
     lit->value = value ? "true" : "false";
@@ -175,10 +175,10 @@ bool Optimizer::FoldBinary(HirExprPtr &expr) {
     bool const rightIsBool = IsBoolLiteral(bin->right.get());
 
     // Integer folding
-    if (leftIsInt && rightIsInt) {
+    if (leftIsInt and rightIsInt) {
         auto const lhsOpt = GetIntegerLiteral(bin->left.get());
         auto const rhsOpt = GetIntegerLiteral(bin->right.get());
-        if (!lhsOpt || !rhsOpt) {
+        if (!lhsOpt or !rhsOpt) {
             return false;
         }
 
@@ -231,7 +231,7 @@ bool Optimizer::FoldBinary(HirExprPtr &expr) {
     }
 
     // Bool folding
-    if (leftIsBool && rightIsBool) {
+    if (leftIsBool and rightIsBool) {
         bool const lhs = GetBoolLiteral(bin->left.get());
         bool const rhs = GetBoolLiteral(bin->right.get());
 
@@ -243,10 +243,10 @@ bool Optimizer::FoldBinary(HirExprPtr &expr) {
             expr = MakeBoolLiteral(lhs != rhs, bin->type);
             return true;
         case TokenKind::AmpAmp:
-            expr = MakeBoolLiteral(lhs && rhs, bin->type);
+            expr = MakeBoolLiteral(lhs and rhs, bin->type);
             return true;
         case TokenKind::PipePipe:
-            expr = MakeBoolLiteral(lhs || rhs, bin->type);
+            expr = MakeBoolLiteral(lhs or rhs, bin->type);
             return true;
         default:
             return false;
@@ -320,14 +320,14 @@ bool Optimizer::SimplifyBinary(HirExprPtr &expr) {
     case TokenKind::Plus: {
         auto const leftOpt =
             IsIntegerLiteral(bin->left.get()) ? GetIntegerLiteral(bin->left.get()) : std::nullopt;
-        if (leftOpt && *leftOpt == 0) {
+        if (leftOpt and *leftOpt == 0) {
             expr = std::move(bin->right);
             return true;
         }
 
         auto const rightOpt =
             IsIntegerLiteral(bin->right.get()) ? GetIntegerLiteral(bin->right.get()) : std::nullopt;
-        if (rightOpt && *rightOpt == 0) {
+        if (rightOpt and *rightOpt == 0) {
             expr = std::move(bin->left);
             return true;
         }
@@ -337,7 +337,7 @@ bool Optimizer::SimplifyBinary(HirExprPtr &expr) {
     case TokenKind::Minus: {
         auto const opt =
             IsIntegerLiteral(bin->right.get()) ? GetIntegerLiteral(bin->right.get()) : std::nullopt;
-        if (opt && *opt == 0) {
+        if (opt and *opt == 0) {
             expr = std::move(bin->left);
             return true;
         }
@@ -376,7 +376,7 @@ bool Optimizer::SimplifyBinary(HirExprPtr &expr) {
     case TokenKind::Slash: {
         auto const opt =
             IsIntegerLiteral(bin->right.get()) ? GetIntegerLiteral(bin->right.get()) : std::nullopt;
-        if (opt && *opt == 1) {
+        if (opt and *opt == 1) {
             expr = std::move(bin->left);
             return true;
         }
@@ -386,7 +386,7 @@ bool Optimizer::SimplifyBinary(HirExprPtr &expr) {
     case TokenKind::Percent: {
         auto const opt =
             IsIntegerLiteral(bin->right.get()) ? GetIntegerLiteral(bin->right.get()) : std::nullopt;
-        if (opt && *opt == 1) {
+        if (opt and *opt == 1) {
             expr = MakeIntegerLiteral(0, bin->type);
             return true;
         }

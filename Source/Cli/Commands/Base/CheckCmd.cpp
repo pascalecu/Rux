@@ -188,7 +188,7 @@ auto enqueueDependency(
         depRoot = (queue.ownerRoot / targetDep->path).lexically_normal();
 
         auto rel = depRoot.lexically_relative(queue.ownerRoot);
-        if (!rel.empty() && rel.begin()->string() == "..") {
+        if (!rel.empty() and rel.begin()->string() == "..") {
             EmitDiag("", 0, 0, "error",
                      "package '" + queue.pkgName +
                          "' contains an invalid path escaping root bounds");
@@ -209,7 +209,7 @@ auto enqueueDependency(
     return true;
 }
 
-int HandleJsonOutput(bool hadErrors, std::vector<JsonDiagnostic> const &jsonDiags) {
+int HandleJsonOutput(bool const hadErrors, std::vector<JsonDiagnostic> const &jsonDiags) {
     std::print("{{\n");
     std::print("  \"success\": {},\n", hadErrors ? "false" : "true");
     std::print("  \"diagnostics\": [\n");
@@ -284,7 +284,7 @@ int HandlePendingIndex(
     for (std::size_t pendingIndex = 0; pendingIndex < pendingPackages.size(); ++pendingIndex) {
         auto const &pendingPkg = pendingPackages[pendingIndex];
 
-        if (opts.verbose && !jsonOutput) {
+        if (opts.verbose and !jsonOutput) {
             std::print(" Loading package {} from {}\n", pendingPkg.name, pendingPkg.root.string());
         }
 
@@ -366,7 +366,7 @@ int HandlePendingIndex(
 
         for (auto const &pkgName : imports) {
             auto const &currentPkg = pendingPackages[pendingIndex];
-            if (pkgName == currentPkg.manifest.package.name || pkgName == currentPkg.name) {
+            if (pkgName == currentPkg.manifest.package.name or pkgName == currentPkg.name) {
                 continue;
             }
 
@@ -403,10 +403,10 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
     for (std::size_t i = 0; i < args.size(); ++i) {
         std::string_view arg = args[i];
 
-        if (arg == "-q" || arg == "--quiet") {
+        if (arg == "-q" or arg == "--quiet") {
             continue;
         }
-        if (arg == "-v" || arg == "--verbose") {
+        if (arg == "-v" or arg == "--verbose") {
             continue;
         }
 
@@ -415,12 +415,12 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
             continue;
         }
 
-        if (arg == "--target" && i + 1 < args.size()) {
+        if (arg == "--target" and i + 1 < args.size()) {
             target = args[++i];
             continue;
         }
 
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("check");
             return 0;
         }
@@ -487,7 +487,7 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
     }
 
     std::string const hostTarget = HostTargetTriple();
-    if (hostTarget != "unknown" && targetName != hostTarget) {
+    if (hostTarget != "unknown" and targetName != hostTarget) {
         if (jsonOutput) {
             EmitFatal("cross-target build from '" + hostTarget + "' to '" + targetName +
                       "' is not supported yet");
@@ -501,7 +501,7 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
         return 1;
     }
 
-    if (!opts.quiet && !jsonOutput) {
+    if (!opts.quiet and !jsonOutput) {
         std::print("Checking {} v{} [{}]\n", manifest->package.name, manifest->package.version,
                    manifestPath->parent_path().string());
     }
@@ -529,7 +529,7 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
     lexResults.reserve(loadResult->files.size());
 
     for (auto const &file : loadResult->files) {
-        if (opts.verbose && !jsonOutput) {
+        if (opts.verbose and !jsonOutput) {
             std::print("    Lexing {}\n", file.path.string());
         }
 
@@ -559,7 +559,7 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
 
     for (std::size_t fileIndex = 0; fileIndex < loadResult->files.size(); ++fileIndex) {
         auto const &file = loadResult->files[fileIndex];
-        if (opts.verbose && !jsonOutput) {
+        if (opts.verbose and !jsonOutput) {
             std::print("    Parsing {}\n", file.path.string());
         }
 

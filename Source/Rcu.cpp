@@ -46,7 +46,7 @@ int SizeOf(TypeRef const &t) {
     case TypeRef::Kind::Opaque:
         return 0;
     case TypeRef::Kind::Tuple: {
-        auto const alignUp = [](int v, int a) { return (v + a - 1) & ~(a - 1); };
+        auto const alignUp = [](int const v, int const a) { return (v + a - 1) & ~(a - 1); };
         int offset = 0;
         int maxAlign = 1;
         for (auto const &elem : t.inner) {
@@ -72,7 +72,7 @@ int SizeOf(TypeRef const &t) {
 }
 
 bool IsFloat(TypeRef const &t) {
-    return t.kind == TypeRef::Kind::Float32 || t.kind == TypeRef::Kind::Float64;
+    return t.kind == TypeRef::Kind::Float32 or t.kind == TypeRef::Kind::Float64;
 }
 
 std::string_view NumericLiteralSuffix(std::string_view text) {
@@ -80,7 +80,7 @@ std::string_view NumericLiteralSuffix(std::string_view text) {
         "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "f32", "f64", "i", "u",
     };
     for (auto const suffix : suffixes) {
-        if (text.size() > suffix.size() && text.substr(text.size() - suffix.size()) == suffix) {
+        if (text.size() > suffix.size() and text.substr(text.size() - suffix.size()) == suffix) {
             return suffix;
         }
     }
@@ -94,7 +94,7 @@ std::optional<std::uint64_t> ParseIntegerLiteralBits(std::string_view text) {
     }
 
     bool negative = false;
-    if (!text.empty() && (text.front() == '-' || text.front() == '+')) {
+    if (!text.empty() and (text.front() == '-' or text.front() == '+')) {
         negative = text.front() == '-';
         text.remove_prefix(1);
     }
@@ -109,7 +109,7 @@ std::optional<std::uint64_t> ParseIntegerLiteralBits(std::string_view text) {
 
     int base = 10;
     std::string_view digits(cleaned);
-    if (digits.size() > 2 && digits[0] == '0') {
+    if (digits.size() > 2 and digits[0] == '0') {
         switch (digits[1]) {
         case 'x':
         case 'X':
@@ -138,7 +138,7 @@ std::optional<std::uint64_t> ParseIntegerLiteralBits(std::string_view text) {
     auto const *first = digits.data();
     auto const *last = first + digits.size();
     auto const [ptr, ec] = std::from_chars(first, last, value, base);
-    if (ec != std::errc{} || ptr != last) {
+    if (ec != std::errc{} or ptr != last) {
         return std::nullopt;
     }
     if (!negative) {
@@ -153,7 +153,7 @@ std::optional<std::uint64_t> ParseIntegerLiteralBits(std::string_view text) {
     return std::uint64_t{0} - value;
 }
 
-int AlignUp(int v, int a) {
+int AlignUp(int const v, int const a) {
     return (v + a - 1) & ~(a - 1);
 }
 
@@ -212,11 +212,11 @@ public:
         return static_cast<uint32_t>(out_.size());
     }
 
-    void Byte(uint8_t b) const {
+    void Byte(uint8_t const b) const {
         out_.push_back(b);
     }
 
-    void Dword(uint32_t d) const {
+    void Dword(uint32_t const d) const {
         out_.push_back(d & 0xFF);
         out_.push_back((d >> 8) & 0xFF);
         out_.push_back((d >> 16) & 0xFF);
@@ -230,7 +230,7 @@ public:
         }
     }
 
-    void Patch32(uint32_t off, int32_t v) const {
+    void Patch32(uint32_t const off, int32_t const v) const {
         out_[off] = v & 0xFF;
         out_[off + 1] = (v >> 8) & 0xFF;
         out_[off + 2] = (v >> 16) & 0xFF;
@@ -248,7 +248,7 @@ public:
         Byte(0xE5);
     }
 
-    void SubRspImm32(int32_t n) const {
+    void SubRspImm32(int32_t const n) const {
         Byte(0x48);
         Byte(0x81);
         Byte(0xEC);
@@ -262,7 +262,7 @@ public:
         Byte(0x24); // test qword [rsp], rax
     }
 
-    void AddRspImm32(int32_t n) const {
+    void AddRspImm32(int32_t const n) const {
         Byte(0x48);
         Byte(0x81);
         Byte(0xC4);
@@ -450,7 +450,7 @@ public:
 
     // ABI arg regs ↔ [RBP + disp32]
     // argIdx: 0=RDI,1=RSI,2=RDX,3=RCX,4=R8,5=R9
-    void MovArgLoad(int const idx, int32_t d) const {
+    void MovArgLoad(int const idx, int32_t const d) const {
         static uint8_t const rex[] = {0x48, 0x48, 0x48, 0x48, 0x4C, 0x4C};
         static uint8_t const modrm[] = {0xBD, 0xB5, 0x95, 0x8D, 0x85, 0x8D};
         Byte(rex[idx]);
@@ -459,7 +459,7 @@ public:
         Dword(u(d));
     }
 
-    void MovArgStore(int const idx, int32_t d) const {
+    void MovArgStore(int const idx, int32_t const d) const {
         static uint8_t const rex[] = {0x48, 0x48, 0x48, 0x48, 0x4C, 0x4C};
         static uint8_t const modrm[] = {0xBD, 0xB5, 0x95, 0x8D, 0x85, 0x8D};
         Byte(rex[idx]);
@@ -603,7 +603,7 @@ public:
 
     // XMM arg regs ↔ [RBP + disp32] (N = 0..7)
     // MOVSS xmmN, [rbp + d]
-    void MovssXmmNLoad(int n, int32_t d) const {
+    void MovssXmmNLoad(int const n, int32_t const d) const {
         Byte(0xF3);
         Byte(0x0F);
         Byte(0x10);
@@ -612,7 +612,7 @@ public:
     }
 
     // MOVSD xmmN, [rbp + d]
-    void MovsdXmmNLoad(int n, int32_t d) const {
+    void MovsdXmmNLoad(int const n, int32_t const d) const {
         Byte(0xF2);
         Byte(0x0F);
         Byte(0x10);
@@ -639,7 +639,7 @@ public:
     }
 
     // XMM0 / XMM1 ↔ [RBP + disp32]
-    void MovssXmm0Load(int32_t d) const {
+    void MovssXmm0Load(int32_t const d) const {
         Byte(0xF3);
         Byte(0x0F);
         Byte(0x10);
@@ -647,7 +647,7 @@ public:
         Dword(u(d));
     }
 
-    void MovsdXmm0Load(int32_t d) const {
+    void MovsdXmm0Load(int32_t const d) const {
         Byte(0xF2);
         Byte(0x0F);
         Byte(0x10);
@@ -655,7 +655,7 @@ public:
         Dword(u(d));
     }
 
-    void MovssXmm1Load(int32_t d) const {
+    void MovssXmm1Load(int32_t const d) const {
         Byte(0xF3);
         Byte(0x0F);
         Byte(0x10);
@@ -663,7 +663,7 @@ public:
         Dword(u(d));
     }
 
-    void MovsdXmm1Load(int32_t d) const {
+    void MovsdXmm1Load(int32_t const d) const {
         Byte(0xF2);
         Byte(0x0F);
         Byte(0x10);
@@ -671,7 +671,7 @@ public:
         Dword(u(d));
     }
 
-    void MovssXmm0Store(int32_t d) const {
+    void MovssXmm0Store(int32_t const d) const {
         Byte(0xF3);
         Byte(0x0F);
         Byte(0x11);
@@ -679,7 +679,7 @@ public:
         Dword(u(d));
     }
 
-    void MovsdXmm0Store(int32_t d) const {
+    void MovsdXmm0Store(int32_t const d) const {
         Byte(0xF2);
         Byte(0x0F);
         Byte(0x11);
@@ -687,7 +687,7 @@ public:
         Dword(u(d));
     }
 
-    void MovssXmm1Store(int32_t d) const {
+    void MovssXmm1Store(int32_t const d) const {
         Byte(0xF3);
         Byte(0x0F);
         Byte(0x11);
@@ -695,7 +695,7 @@ public:
         Dword(u(d));
     }
 
-    void MovsdXmm1Store(int32_t d) const {
+    void MovsdXmm1Store(int32_t const d) const {
         Byte(0xF2);
         Byte(0x0F);
         Byte(0x11);
@@ -741,13 +741,13 @@ public:
     }
 
     // Immediate loads
-    void MovRaxImm64(int64_t v) const {
+    void MovRaxImm64(int64_t const v) const {
         Byte(0x48);
         Byte(0xB8);
         Qword(static_cast<uint64_t>(v));
     }
 
-    void MovEaxImm32(int32_t v) const {
+    void MovEaxImm32(int32_t const v) const {
         Byte(0xB8);
         Dword(static_cast<uint32_t>(v));
     }
@@ -769,7 +769,7 @@ public:
         Dword(0);
     }
 
-    void LeaRaxStack(int32_t d) const {
+    void LeaRaxStack(int32_t const d) const {
         Byte(0x48);
         Byte(0x8D);
         Byte(0x85);
@@ -911,7 +911,7 @@ public:
         Byte(0xD0);
     }
 
-    void CmpRaxImm32(int32_t v) const {
+    void CmpRaxImm32(int32_t const v) const {
         Byte(0x48);
         Byte(0x81);
         Byte(0xF8);
@@ -1289,7 +1289,7 @@ public:
     }
 
     // Aggregate helpers
-    void ImulR11R10Imm32(int32_t v) const {
+    void ImulR11R10Imm32(int32_t const v) const {
         Byte(0x4D);
         Byte(0x69);
         Byte(0xDA);
@@ -1302,7 +1302,7 @@ public:
         Byte(0xD8);
     }
 
-    void LeaRaxRaxDisp(int32_t v) const {
+    void LeaRaxRaxDisp(int32_t const v) const {
         Byte(0x48);
         Byte(0x8D);
         Byte(0x80);
@@ -1458,11 +1458,11 @@ private:
             return false;
         }
         std::string const base = BaseTypeName(t.name);
-        return base == "Slice" || interfaceNames.count(base) > 0;
+        return base == "Slice" or interfaceNames.count(base) > 0;
     }
 
     [[nodiscard]] bool IsPointerToWin64ByRefAggregate(TypeRef const &t) const {
-        return t.kind == TypeRef::Kind::Pointer && !t.inner.empty() &&
+        return t.kind == TypeRef::Kind::Pointer and !t.inner.empty() and
                IsWin64ByRefAggregate(t.inner[0]);
     }
 
@@ -1477,7 +1477,8 @@ private:
         return idx;
     }
 
-    uint32_t GetOrAddExtern(std::string const &name, uint8_t kind, std::string const &dll = {}) {
+    uint32_t GetOrAddExtern(std::string const &name, uint8_t const kind,
+                            std::string const &dll = {}) {
         auto it = externSyms.find(name);
         if (it != externSyms.end()) {
             return it->second;
@@ -1549,7 +1550,7 @@ private:
 
     void PredeclareFunctions() {
         for (auto const &func : mod.funcs) {
-            if (func.isExtern || funcSyms.contains(func.name)) {
+            if (func.isExtern or funcSyms.contains(func.name)) {
                 continue;
             }
             RcuSymbol sym;
@@ -1565,7 +1566,7 @@ private:
 
     // Align rodataData_ to `align` bytes (zero-fill), return current
     // offset.
-    uint32_t AlignRodata(int align) {
+    uint32_t AlignRodata(int const align) {
         while (rodataData.size() % align) {
             rodataData.push_back(0);
         }
@@ -1689,11 +1690,12 @@ private:
         return f64SignMaskSym;
     }
 
-    void AddTextReloc(uint32_t sectionOff, uint32_t symIdx, int32_t addend = 0) {
+    void AddTextReloc(uint32_t const sectionOff, uint32_t const symIdx, int32_t const addend = 0) {
         textRelocs.push_back({sectionOff, symIdx, RcuRelType::Rel32, addend});
     }
 
-    void AddRodataReloc(uint32_t sectionOff, uint32_t symIdx, uint16_t type, int32_t addend = 0) {
+    void AddRodataReloc(uint32_t const sectionOff, uint32_t const symIdx, uint16_t const type,
+                        int32_t const addend = 0) {
         rodataRelocs.push_back({sectionOff, symIdx, type, addend});
     }
 
@@ -1726,7 +1728,7 @@ private:
                 enc.MovsdXmm0Load(d);
             }
         }
-        else if (sz == 8 || sz == 0) {
+        else if (sz == 8 or sz == 0) {
             enc.MovRaxLoad(d);
         }
         else if (t.IsSigned()) {
@@ -1753,7 +1755,7 @@ private:
         }
     }
 
-    void LoadB(LirReg reg, TypeRef const &t) const {
+    void LoadB(LirReg const reg, TypeRef const &t) const {
         int sz = SizeOf(t);
         int32_t d = Disp(reg);
         if (IsFloat(t)) {
@@ -1764,7 +1766,7 @@ private:
                 enc.MovsdXmm1Load(d);
             }
         }
-        else if (sz == 8 || sz == 0) {
+        else if (sz == 8 or sz == 0) {
             enc.MovR10Load(d);
         }
         else if (t.IsSigned()) {
@@ -1791,7 +1793,7 @@ private:
         }
     }
 
-    void StoreA(LirReg dst, TypeRef const &t) const {
+    void StoreA(LirReg const dst, TypeRef const &t) const {
         int sz = SizeOf(t);
         int runtimeSz = SizeOfRuntime(t);
         int32_t d = Disp(dst);
@@ -1852,7 +1854,7 @@ private:
     }
 
     void StoreHiddenReturnValue(LirReg const src, TypeRef const &t) const {
-        if (hiddenReturnOff == 0 || SizeOfRuntime(t) != 16) {
+        if (hiddenReturnOff == 0 or SizeOfRuntime(t) != 16) {
             LoadReturnValue(src, t);
             return;
         }
@@ -1872,13 +1874,13 @@ private:
     }
 
     // Struct field lookup
-    int FieldOffset(LirReg base, std::string const &fieldName) {
+    int FieldOffset(LirReg const base, std::string const &fieldName) {
         auto typeIt = regTypes.find(base);
         if (typeIt == regTypes.end()) {
             return 0;
         }
         TypeRef const &pt = typeIt->second;
-        if (pt.kind != TypeRef::Kind::Pointer || pt.inner.empty()) {
+        if (pt.kind != TypeRef::Kind::Pointer or pt.inner.empty()) {
             return 0;
         }
         TypeRef const &inner = pt.inner[0];
@@ -1908,7 +1910,7 @@ private:
             if (idx >= inner.inner.size()) {
                 return 0;
             }
-            for (std::size_t i = 0; i < idx && i < inner.inner.size(); ++i) {
+            for (std::size_t i = 0; i < idx and i < inner.inner.size(); ++i) {
                 int const sz = SizeOf(inner.inner[i]);
                 int const al = sz > 0 ? std::min(sz, 8) : 1;
                 if (al > 1) {
@@ -1958,7 +1960,7 @@ private:
     }
 
     // Pre-pass: allocate stack slots
-    int32_t AllocSlot(LirReg reg, int bytes) {
+    int32_t AllocSlot(LirReg const reg, int const bytes) {
         if (auto it = slotMap.find(reg); it != slotMap.end()) {
             return it->second;
         }
@@ -1969,7 +1971,7 @@ private:
         return nextOff;
     }
 
-    int32_t AllocRegion(int bytes) {
+    int32_t AllocRegion(int const bytes) {
         int al = (bytes > 0) ? std::min(bytes, 8) : 1;
         nextOff = AlignUp(nextOff, al);
         nextOff += (bytes > 0 ? bytes : 8);
@@ -1984,7 +1986,7 @@ private:
         allocaData.clear();
         regTypes.clear();
         phiMoves.clear();
-        if (EffectiveConv(func.callConv) == CallingConvention::Win64 &&
+        if (EffectiveConv(func.callConv) == CallingConvention::Win64 and
             IsWin64ByRefAggregate(func.returnType)) {
             hiddenReturnOff = AllocRegion(8);
         }
@@ -2070,7 +2072,7 @@ private:
     }
 
     // Phi move emission
-    bool HasPhiMoves(uint32_t const from, uint32_t to) const {
+    bool HasPhiMoves(uint32_t const from, uint32_t const to) const {
         auto it = phiMoves.find(from);
         if (it == phiMoves.end()) {
             return false;
@@ -2078,7 +2080,7 @@ private:
         return it->second.contains(to);
     }
 
-    void EmitPhiMoves(uint32_t const from, uint32_t to) {
+    void EmitPhiMoves(uint32_t const from, uint32_t const to) {
         auto it1 = phiMoves.find(from);
         if (it1 == phiMoves.end()) {
             return;
@@ -2113,7 +2115,8 @@ private:
 
     // Call argument setup
     void EmitCallArgs(std::vector<LirReg> const &args,
-                      CallingConvention conv = CallingConvention::Default, int startIdx = 0) const {
+                      CallingConvention const conv = CallingConvention::Default,
+                      int const startIdx = 0) const {
         if (EffectiveConv(conv) == CallingConvention::Win64) {
             // Unified index: rcx/xmm0=0, rdx/xmm1=1, r8/xmm2=2,
             // r9/xmm3=3
@@ -2224,7 +2227,7 @@ private:
                 enc.MovsdXmm0Store(Disp(instr.dst));
             }
             else if (t.IsBool()) {
-                enc.MovEaxImm32((instr.strArg == "true" || instr.strArg == "1") ? 1 : 0);
+                enc.MovEaxImm32((instr.strArg == "true" or instr.strArg == "1") ? 1 : 0);
                 StoreA(instr.dst, t);
             }
             else {
@@ -2293,7 +2296,7 @@ private:
                     StoreA(instr.dst, t);
                     break;
                 }
-                else if (sz == 8 || sz == 0) {
+                else if (sz == 8 or sz == 0) {
                     enc.Byte(0x49);
                     enc.Byte(0x8B);
                     enc.Byte(0x02); // mov rax, [r10]
@@ -2561,7 +2564,7 @@ private:
             enc.MovR11Load(Disp(instr.srcs[1]));
             enc.MovRcxR11();
             bool isShr = (instr.op == LirOpcode::Shr);
-            if (isShr && t.IsSigned()) {
+            if (isShr and t.IsSigned()) {
                 enc.SarRaxCl();
             }
             else if (isShr) {
@@ -2649,42 +2652,42 @@ private:
 
                 switch (instr.op) {
                 case LirOpcode::CmpEq:
-                    // ordered && equal
+                    // ordered and equal
                     enc.SeteAl();  // AL = ZF
                     enc.SetnpDl(); // DL = !PF
                     enc.AndAlDl();
                     break;
 
                 case LirOpcode::CmpNe:
-                    // unordered || unequal
+                    // unordered or unequal
                     enc.SetneAl(); // AL = !ZF
                     enc.SetpDl();  // DL = PF
                     enc.OrAlDl();
                     break;
 
                 case LirOpcode::CmpLt:
-                    // ordered && CF
+                    // ordered and CF
                     enc.SetbAl();
                     enc.SetnpDl();
                     enc.AndAlDl();
                     break;
 
                 case LirOpcode::CmpLe:
-                    // ordered && (CF || ZF)
+                    // ordered and (CF or ZF)
                     enc.SetbeAl();
                     enc.SetnpDl();
                     enc.AndAlDl();
                     break;
 
                 case LirOpcode::CmpGt:
-                    // ordered && (!CF && !ZF)
+                    // ordered and (!CF and !ZF)
                     enc.SetaAl();
                     enc.SetnpDl();
                     enc.AndAlDl();
                     break;
 
                 case LirOpcode::CmpGe:
-                    // ordered && !CF
+                    // ordered and !CF
                     enc.SetaeAl();
                     enc.SetnpDl();
                     enc.AndAlDl();
@@ -2724,7 +2727,7 @@ private:
             TypeRef srcT = regTypes.contains(instr.srcs[0]) ? regTypes.at(instr.srcs[0]) : dstT;
             LoadA(instr.srcs[0], srcT);
             bool srcFl = IsFloat(srcT), dstFl = IsFloat(dstT);
-            if (srcFl && !dstFl) {
+            if (srcFl and !dstFl) {
                 if (srcT.kind == TypeRef::Kind::Float32) {
                     enc.CvttsssiRaxXmm0();
                 }
@@ -2732,7 +2735,7 @@ private:
                     enc.CvttsdsiRaxXmm0();
                 }
             }
-            else if (!srcFl && dstFl) {
+            else if (!srcFl and dstFl) {
                 if (dstT.kind == TypeRef::Kind::Float32) {
                     enc.Cvtsi2ssXmm0Rax();
                 }
@@ -2740,11 +2743,11 @@ private:
                     enc.Cvtsi2sdXmm0Rax();
                 }
             }
-            else if (srcFl && dstFl) {
-                if (srcT.kind == TypeRef::Kind::Float32 && dstT.kind == TypeRef::Kind::Float64) {
+            else if (srcFl and dstFl) {
+                if (srcT.kind == TypeRef::Kind::Float32 and dstT.kind == TypeRef::Kind::Float64) {
                     enc.CvtsssdXmm0();
                 }
-                else if (srcT.kind == TypeRef::Kind::Float64 &&
+                else if (srcT.kind == TypeRef::Kind::Float64 and
                          dstT.kind == TypeRef::Kind::Float32) {
                     enc.CvtsdssXmm0();
                 }
@@ -2754,58 +2757,58 @@ private:
         }
         case LirOpcode::Call: {
             // Built-in: FloatBits64 — reinterpret float64 bits as uint64
-            if (instr.strArg == "FloatBits64" && instr.srcs.size() == 1) {
+            if (instr.strArg == "FloatBits64" and instr.srcs.size() == 1) {
                 enc.MovsdXmm0Load(Disp(instr.srcs[0]));
                 enc.Byte(0x66);
                 enc.Byte(0x48);
                 enc.Byte(0x0F);
                 enc.Byte(0x7E);
                 enc.Byte(0xC0); // movq rax, xmm0
-                if (instr.dst != LirNoReg && !instr.type.IsOpaque()) {
+                if (instr.dst != LirNoReg and !instr.type.IsOpaque()) {
                     StoreReturnValue(instr.dst, instr.type);
                 }
                 break;
             }
             // Built-in: FloatFromBits64 — reinterpret uint64 bits as float64
-            if (instr.strArg == "FloatFromBits64" && instr.srcs.size() == 1) {
+            if (instr.strArg == "FloatFromBits64" and instr.srcs.size() == 1) {
                 enc.MovRaxLoad(Disp(instr.srcs[0]));
                 enc.Byte(0x66);
                 enc.Byte(0x48);
                 enc.Byte(0x0F);
                 enc.Byte(0x6E);
                 enc.Byte(0xC0); // movq xmm0, rax
-                if (instr.dst != LirNoReg && !instr.type.IsOpaque()) {
+                if (instr.dst != LirNoReg and !instr.type.IsOpaque()) {
                     StoreReturnValue(instr.dst, instr.type);
                 }
                 break;
             }
             // Built-in: FloatBits32 — reinterpret float32 bits as uint32
-            if (instr.strArg == "FloatBits32" && instr.srcs.size() == 1) {
+            if (instr.strArg == "FloatBits32" and instr.srcs.size() == 1) {
                 enc.MovssXmm0Load(Disp(instr.srcs[0]));
                 enc.Byte(0x66);
                 enc.Byte(0x0F);
                 enc.Byte(0x7E);
                 enc.Byte(0xC0); // movd eax, xmm0
-                if (instr.dst != LirNoReg && !instr.type.IsOpaque()) {
+                if (instr.dst != LirNoReg and !instr.type.IsOpaque()) {
                     StoreReturnValue(instr.dst, instr.type);
                 }
                 break;
             }
             // Built-in: FloatFromBits32 — reinterpret uint32 bits as float32
-            if (instr.strArg == "FloatFromBits32" && instr.srcs.size() == 1) {
+            if (instr.strArg == "FloatFromBits32" and instr.srcs.size() == 1) {
                 enc.MovRaxLoad(Disp(instr.srcs[0]));
                 enc.Byte(0x66);
                 enc.Byte(0x0F);
                 enc.Byte(0x6E);
                 enc.Byte(0xC0); // movd xmm0, eax
-                if (instr.dst != LirNoReg && !instr.type.IsOpaque()) {
+                if (instr.dst != LirNoReg and !instr.type.IsOpaque()) {
                     StoreReturnValue(instr.dst, instr.type);
                 }
                 break;
             }
             bool win64Call = EffectiveConv(instr.callConv) == CallingConvention::Win64;
             bool const hiddenReturn =
-                win64Call && instr.dst != LirNoReg && IsWin64ByRefAggregate(instr.type);
+                win64Call and instr.dst != LirNoReg and IsWin64ByRefAggregate(instr.type);
             int const callFrameSize =
                 win64Call ? Win64CallFrameSize(instr.srcs.size() + (hiddenReturn ? 1 : 0)) : 0;
             if (win64Call) {
@@ -2831,7 +2834,7 @@ private:
             if (win64Call) {
                 enc.AddRspImm32(callFrameSize);
             }
-            if (instr.dst != LirNoReg && !instr.type.IsOpaque() && !hiddenReturn) {
+            if (instr.dst != LirNoReg and !instr.type.IsOpaque() and !hiddenReturn) {
                 StoreReturnValue(instr.dst, instr.type);
             }
             break;
@@ -2844,7 +2847,7 @@ private:
             std::vector<LirReg> args(instr.srcs.begin() + 1, instr.srcs.end());
             bool win64Call = EffectiveConv(instr.callConv) == CallingConvention::Win64;
             bool const hiddenReturn =
-                win64Call && instr.dst != LirNoReg && IsWin64ByRefAggregate(instr.type);
+                win64Call and instr.dst != LirNoReg and IsWin64ByRefAggregate(instr.type);
             int const callFrameSize =
                 win64Call ? Win64CallFrameSize(args.size() + (hiddenReturn ? 1 : 0)) : 0;
             if (win64Call) {
@@ -2862,7 +2865,7 @@ private:
             if (win64Call) {
                 enc.AddRspImm32(callFrameSize);
             }
-            if (instr.dst != LirNoReg && !instr.type.IsOpaque() && !hiddenReturn) {
+            if (instr.dst != LirNoReg and !instr.type.IsOpaque() and !hiddenReturn) {
                 StoreReturnValue(instr.dst, instr.type);
             }
             break;
@@ -2897,7 +2900,7 @@ private:
         case LirOpcode::IndexPtr: {
             LirReg base = instr.srcs[0];
             LirReg idx = instr.srcs[1];
-            int elemSz = (instr.type.kind == TypeRef::Kind::Pointer && !instr.type.inner.empty())
+            int elemSz = (instr.type.kind == TypeRef::Kind::Pointer and !instr.type.inner.empty())
                            ? SizeOfRuntime(instr.type.inner[0])
                            : 8;
             if (elemSz < 1) {
@@ -2918,7 +2921,7 @@ private:
     }
 
     // Terminator
-    void GenTerm(uint32_t blockIdx, LirTerminator const &term, LirFunc const &func) {
+    void GenTerm(uint32_t const blockIdx, LirTerminator const &term, LirFunc const &func) {
         (void)func;
         switch (term.kind) {
         case LirTermKind::Jump: {
@@ -2951,7 +2954,7 @@ private:
             enc.TestRaxRax();
             bool const truePhi = HasPhiMoves(blockIdx, term.trueTarget);
             if (bool const falsePhi = HasPhiMoves(blockIdx, term.falseTarget);
-                !truePhi && !falsePhi) {
+                !truePhi and !falsePhi) {
                 uint32_t po;
                 enc.Jz(po);
                 jumpPatches.push_back({po, term.falseTarget});
@@ -2978,8 +2981,8 @@ private:
             break;
         }
         case LirTermKind::Return: {
-            if (term.retVal && *term.retVal != LirNoReg) {
-                if (hiddenReturnOff != 0 && IsWin64ByRefAggregate(term.retType)) {
+            if (term.retVal and *term.retVal != LirNoReg) {
+                if (hiddenReturnOff != 0 and IsWin64ByRefAggregate(term.retType)) {
                     StoreHiddenReturnValue(*term.retVal, term.retType);
                 }
                 else {
@@ -3038,7 +3041,7 @@ private:
         // Spill ABI param registers to stack slots
         bool win64Func = EffectiveConv(func.callConv) == CallingConvention::Win64;
         int intIdx = 0, fltIdx = 0, win64Idx = 0;
-        if (win64Func && hiddenReturnOff != 0) {
+        if (win64Func and hiddenReturnOff != 0) {
             enc.MovArgStoreWin64(0, -hiddenReturnOff);
             win64Idx = 1;
         }
@@ -3149,7 +3152,7 @@ private:
         PatchJumps();
         // Update symbol size
         for (auto &s : symbols) {
-            if (s.name == func.name && s.sectionIdx == RCU_TEXT_IDX && s.value == funcStart) {
+            if (s.name == func.name and s.sectionIdx == RCU_TEXT_IDX and s.value == funcStart) {
                 s.size = enc.Size() - funcStart;
                 break;
             }
@@ -3238,10 +3241,10 @@ RcuFile RcuCodeGen::Generate() {
         std::string ver = RUX_VERSION;
         unsigned M = 0, mi = 0, p = 0;
         auto parseNum = [](char const *s, unsigned &out) -> char const * {
-            while (*s && (*s < '0' || *s > '9')) {
+            while (*s and (*s < '0' or *s > '9')) {
                 ++s;
             }
-            while (*s >= '0' && *s <= '9') {
+            while (*s >= '0' and *s <= '9') {
                 out = out * 10 + static_cast<unsigned>(*s - '0');
                 ++s;
             }
@@ -3348,11 +3351,11 @@ private:
         }
     }
 
-    static void AppendU8(std::vector<uint8_t> &buf, uint8_t v) {
+    static void AppendU8(std::vector<uint8_t> &buf, uint8_t const v) {
         buf.push_back(v);
     }
 
-    static void AppendU16(std::vector<uint8_t> &buf, uint16_t v) {
+    static void AppendU16(std::vector<uint8_t> &buf, uint16_t const v) {
         buf.push_back(v & 0xFF);
         buf.push_back(v >> 8);
     }
@@ -3364,7 +3367,7 @@ private:
         }
     }
 
-    static void AppendI32(std::vector<uint8_t> &buf, int32_t v) {
+    static void AppendI32(std::vector<uint8_t> &buf, int32_t const v) {
         AppendU32(buf, static_cast<uint32_t>(v));
     }
 
@@ -3375,14 +3378,14 @@ private:
         }
     }
 
-    static void Patch32At(std::vector<uint8_t> &buf, uint32_t off, uint32_t v) {
+    static void Patch32At(std::vector<uint8_t> &buf, uint32_t const off, uint32_t const v) {
         buf[off] = v & 0xFF;
         buf[off + 1] = (v >> 8) & 0xFF;
         buf[off + 2] = (v >> 16) & 0xFF;
         buf[off + 3] = v >> 24;
     }
 
-    static void AlignTo(std::vector<uint8_t> &buf, int a) {
+    static void AlignTo(std::vector<uint8_t> &buf, int const a) {
         while (buf.size() % a) {
             buf.push_back(0);
         }
@@ -3432,7 +3435,7 @@ private:
             auto const &sec = f_.sections[i];
             // name[8]
             char name8[8] = {};
-            for (int j = 0; j < 7 && j < static_cast<int>(sec.name.size()); ++j) {
+            for (int j = 0; j < 7 and j < static_cast<int>(sec.name.size()); ++j) {
                 name8[j] = sec.name[j];
             }
             for (char c : name8) {
@@ -3684,9 +3687,9 @@ public:
                     }
                 }
                 out << " |";
-                for (size_t j = 0; j < 16 && i + j < sec.data.size(); ++j) {
+                for (size_t j = 0; j < 16 and i + j < sec.data.size(); ++j) {
                     unsigned char c = sec.data[i + j];
-                    out << (c >= 32 && c < 127 ? static_cast<char>(c) : '.');
+                    out << (c >= 32 and c < 127 ? static_cast<char>(c) : '.');
                 }
                 out << "|\n";
             }

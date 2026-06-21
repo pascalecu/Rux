@@ -67,7 +67,7 @@ static std::optional<std::uint32_t> DecodeUtf8CodePoint(std::string_view text) {
         }
         codePoint = (codePoint << 6) | *byte;
     }
-    if (codePoint < minValue || codePoint > 0x10FFFF) {
+    if (codePoint < minValue or codePoint > 0x10FFFF) {
         return std::nullopt;
     }
     return codePoint;
@@ -95,7 +95,7 @@ std::optional<LexerResult> Lexer::FromFile(std::filesystem::path const &path) {
     }
     std::ostringstream ss;
     ss << f.rdbuf();
-    if (!f && !f.eof()) {
+    if (!f and !f.eof()) {
         std::print(stderr, "error: failed to read '{}'\n", path.string());
         return std::nullopt;
     }
@@ -145,7 +145,7 @@ bool Lexer::DumpTokens(LexerResult const &result, std::filesystem::path const &p
 
 std::optional<std::uint32_t> Lexer::DecodeCharLiteralCodePoint(std::string_view text) {
     std::size_t const quote = text.find('\'');
-    if (quote == std::string::npos || text.size() < quote + 3) {
+    if (quote == std::string::npos or text.size() < quote + 3) {
         return std::nullopt;
     }
 
@@ -158,41 +158,41 @@ std::optional<std::uint32_t> Lexer::DecodeCharLiteralCodePoint(std::string_view 
 
     if (body[0] == '\\') {
         if (body == "\\n") {
-            return static_cast<std::uint32_t>('\n');
+            return '\n';
         }
         if (body == "\\t") {
-            return static_cast<std::uint32_t>('\t');
+            return '\t';
         }
         if (body == "\\r") {
-            return static_cast<std::uint32_t>('\r');
+            return '\r';
         }
         if (body == "\\0") {
-            return static_cast<std::uint32_t>('\0');
+            return '\0';
         }
         if (body == "\\\\") {
-            return static_cast<std::uint32_t>('\\');
+            return '\\';
         }
         if (body == "\\'") {
-            return static_cast<std::uint32_t>('\'');
+            return '\'';
         }
         if (body == "\\\"") {
-            return static_cast<std::uint32_t>('\"');
+            return '\"';
         }
-        if (body.starts_with("\\u{") && body.ends_with("}")) {
+        if (body.starts_with("\\u{") and body.ends_with("}")) {
             std::string_view const digits = body.substr(3, body.size() - 4);
-            if (digits.empty() || digits.size() > 8) {
+            if (digits.empty() or digits.size() > 8) {
                 return std::nullopt;
             }
             std::uint32_t codePoint = 0;
             for (char const digit : digits) {
                 codePoint <<= 4;
-                if (digit >= '0' && digit <= '9') {
+                if (digit >= '0' and digit <= '9') {
                     codePoint |= static_cast<std::uint32_t>(digit - '0');
                 }
-                else if (digit >= 'a' && digit <= 'f') {
+                else if (digit >= 'a' and digit <= 'f') {
                     codePoint |= static_cast<std::uint32_t>(digit - 'a' + 10);
                 }
-                else if (digit >= 'A' && digit <= 'F') {
+                else if (digit >= 'A' and digit <= 'F') {
                     codePoint |= static_cast<std::uint32_t>(digit - 'A' + 10);
                 }
                 else {
@@ -217,7 +217,7 @@ void Lexer::ScanAll() {
             break;
         }
 
-        if (Token tok = NextToken(); tok.kind != TokenKind::Unknown || !tok.text.empty()) {
+        if (Token tok = NextToken(); tok.kind != TokenKind::Unknown or !tok.text.empty()) {
             tokens.push_back(std::move(tok));
         }
     }
@@ -229,27 +229,27 @@ Token Lexer::NextToken() {
     char const c = Peek();
     // Prefixed string literals
     if (c == 'c') {
-        if (Peek(1) == '8' && Peek(2) == '"') {
+        if (Peek(1) == '8' and Peek(2) == '"') {
             return ScanString(start, 2);
         }
-        if (Peek(1) == '8' && Peek(2) == '\'') {
+        if (Peek(1) == '8' and Peek(2) == '\'') {
             return ScanChar(start, 2);
         }
-        if (Peek(1) == '1' && Peek(2) == '6' && Peek(3) == '"') {
+        if (Peek(1) == '1' and Peek(2) == '6' and Peek(3) == '"') {
             return ScanString(start, 3);
         }
-        if (Peek(1) == '1' && Peek(2) == '6' && Peek(3) == '\'') {
+        if (Peek(1) == '1' and Peek(2) == '6' and Peek(3) == '\'') {
             return ScanChar(start, 3);
         }
-        if (Peek(1) == '3' && Peek(2) == '2' && Peek(3) == '"') {
+        if (Peek(1) == '3' and Peek(2) == '2' and Peek(3) == '"') {
             return ScanString(start, 3);
         }
-        if (Peek(1) == '3' && Peek(2) == '2' && Peek(3) == '\'') {
+        if (Peek(1) == '3' and Peek(2) == '2' and Peek(3) == '\'') {
             return ScanChar(start, 3);
         }
     }
     // Identifiers / keywords
-    if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') {
+    if (std::isalpha(static_cast<unsigned char>(c)) or c == '_') {
         return ScanIdent(start);
     }
     // Numeric literals
@@ -310,13 +310,13 @@ void Lexer::AdvanceUtf8CodePoint() noexcept {
         byteCount = 4;
     }
 
-    for (std::size_t i = 0; i < byteCount && !IsAtEnd(); ++i) {
+    for (std::size_t i = 0; i < byteCount and !IsAtEnd(); ++i) {
         Advance();
     }
 }
 
-bool Lexer::Match(char expected) noexcept {
-    if (IsAtEnd() || source[pos] != expected) {
+bool Lexer::Match(char const expected) noexcept {
+    if (IsAtEnd() or source[pos] != expected) {
         return false;
     }
     Advance();
@@ -347,7 +347,7 @@ void Lexer::SkipWhitespace() {
     while (!IsAtEnd()) {
         char const c = Peek();
         // Inline whitespace
-        if (c == ' ' || c == '\t' || c == '\r') {
+        if (c == ' ' or c == '\t' or c == '\r') {
             Advance();
             continue;
         }
@@ -358,12 +358,12 @@ void Lexer::SkipWhitespace() {
             continue;
         }
         // Line comment
-        if (c == '/' && Peek(1) == '/') {
+        if (c == '/' and Peek(1) == '/') {
             SkipLineComment();
             continue;
         }
         // Block comment
-        if (c == '/' && Peek(1) == '*') {
+        if (c == '/' and Peek(1) == '*') {
             SkipBlockComment();
             continue;
         }
@@ -372,7 +372,7 @@ void Lexer::SkipWhitespace() {
 }
 
 void Lexer::SkipLineComment() {
-    while (!IsAtEnd() && Peek() != '\n') {
+    while (!IsAtEnd() and Peek() != '\n') {
         Advance();
     }
     if (!IsAtEnd()) {
@@ -385,13 +385,13 @@ void Lexer::SkipBlockComment() {
     Advance();
     Advance();
     int depth = 1; // supports nested  /* /* */ */
-    while (!IsAtEnd() && depth > 0) {
-        if (Peek() == '/' && Peek(1) == '*') {
+    while (!IsAtEnd() and depth > 0) {
+        if (Peek() == '/' and Peek(1) == '*') {
             Advance();
             Advance();
             ++depth;
         }
-        else if (Peek() == '*' && Peek(1) == '/') {
+        else if (Peek() == '*' and Peek(1) == '/') {
             Advance();
             Advance();
             --depth;
@@ -405,11 +405,11 @@ void Lexer::SkipBlockComment() {
     }
 }
 
-Token Lexer::ScanIdent(SourceLocation start) {
+Token Lexer::ScanIdent(SourceLocation const start) {
     std::size_t const tokenStart = pos;
     while (!IsAtEnd()) {
         char const c = Peek();
-        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') {
+        if (!std::isalnum(static_cast<unsigned char>(c)) and c != '_') {
             break;
         }
         Advance();
@@ -419,55 +419,55 @@ Token Lexer::ScanIdent(SourceLocation start) {
     return Token{kind, std::move(text), start};
 }
 
-Token Lexer::ScanNumber(SourceLocation start) {
+Token Lexer::ScanNumber(SourceLocation const start) {
     std::size_t const tokenStart = pos;
     // Detect base prefix: 0x  0b  0o
     if (Peek() == '0') {
         char const next = Peek(1);
-        if (next == 'x' || next == 'X') {
+        if (next == 'x' or next == 'X') {
             Advance();
             Advance(); // consume  0x
             return ScanIntLiteral(start, tokenStart);
         }
-        if (next == 'b' || next == 'B') {
+        if (next == 'b' or next == 'B') {
             Advance();
             Advance(); // consume  0b
             return ScanIntLiteral(start, tokenStart);
         }
-        if (next == 'o' || next == 'O') {
+        if (next == 'o' or next == 'O') {
             Advance();
             Advance(); // consume  0o
             return ScanIntLiteral(start, tokenStart);
         }
     }
     // Decimal integer digits
-    while (!IsAtEnd() && std::isdigit(static_cast<unsigned char>(Peek()))) {
+    while (!IsAtEnd() and std::isdigit(static_cast<unsigned char>(Peek()))) {
         Advance();
     }
     // Check for floating-point  .  or  e/E
-    bool const hasDot = Peek() == '.' && std::isdigit(static_cast<unsigned char>(Peek(1)));
-    bool const hasExp = (Peek() == 'e' || Peek() == 'E');
-    if (hasDot || hasExp) {
+    bool const hasDot = Peek() == '.' and std::isdigit(static_cast<unsigned char>(Peek(1)));
+    bool const hasExp = (Peek() == 'e' or Peek() == 'E');
+    if (hasDot or hasExp) {
         return ScanFloatSuffix(start, tokenStart);
     }
     ConsumeNumberSuffix();
     return MakeToken(TokenKind::IntLiteral, start, tokenStart);
 }
 
-Token Lexer::ScanIntLiteral(SourceLocation start, std::size_t tokenStart) {
+Token Lexer::ScanIntLiteral(SourceLocation const start, std::size_t tokenStart) {
     // Detect base from prefix (set in ScanNumber before calling this).
     // 0x/0X -> 16, 0b/0B -> 2, 0o/0O -> 8, else 10.
     std::string_view const text(source.data() + tokenStart, pos - tokenStart);
     int base = 10;
-    if (text.size() >= 2 && text[0] == '0') {
+    if (text.size() >= 2 and text[0] == '0') {
         char const prefix = text[1];
-        if (prefix == 'x' || prefix == 'X') {
+        if (prefix == 'x' or prefix == 'X') {
             base = 16;
         }
-        else if (prefix == 'b' || prefix == 'B') {
+        else if (prefix == 'b' or prefix == 'B') {
             base = 2;
         }
-        else if (prefix == 'o' || prefix == 'O') {
+        else if (prefix == 'o' or prefix == 'O') {
             base = 8;
         }
     }
@@ -480,10 +480,10 @@ Token Lexer::ScanIntLiteral(SourceLocation start, std::size_t tokenStart) {
     while (!IsAtEnd()) {
         char const c = Peek();
         bool valid = false;
-        if (c >= '0' && c <= '9') {
+        if (c >= '0' and c <= '9') {
             valid = c - '0' < base;
         }
-        else if (base == 16 && ((c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
+        else if (base == 16 and ((c >= 'a' and c <= 'f') or (c >= 'A' and c <= 'F'))) {
             valid = true;
         }
         else if (c == '_') {
@@ -504,25 +504,25 @@ Token Lexer::ScanIntLiteral(SourceLocation start, std::size_t tokenStart) {
     return MakeToken(TokenKind::IntLiteral, start, tokenStart);
 }
 
-Token Lexer::ScanFloatSuffix(SourceLocation start, std::size_t tokenStart) {
+Token Lexer::ScanFloatSuffix(SourceLocation const start, std::size_t tokenStart) {
     // Fractional part
     if (Peek() == '.') {
         Advance(); // consume  .
-        while (!IsAtEnd() && std::isdigit(static_cast<unsigned char>(Peek()))) {
+        while (!IsAtEnd() and std::isdigit(static_cast<unsigned char>(Peek()))) {
             Advance();
         }
     }
     // Exponent part  e[+-]digits
-    if (Peek() == 'e' || Peek() == 'E') {
+    if (Peek() == 'e' or Peek() == 'E') {
         Advance();
-        if (Peek() == '+' || Peek() == '-') {
+        if (Peek() == '+' or Peek() == '-') {
             Advance();
         }
         if (!std::isdigit(static_cast<unsigned char>(Peek()))) {
             EmitError(start, "expected digits after exponent");
         }
         else {
-            while (!IsAtEnd() && std::isdigit(static_cast<unsigned char>(Peek()))) {
+            while (!IsAtEnd() and std::isdigit(static_cast<unsigned char>(Peek()))) {
                 Advance();
             }
         }
@@ -536,21 +536,21 @@ void Lexer::ConsumeNumberSuffix() {
         return;
     }
     while (!IsAtEnd()) {
-        if (char const c = Peek(); !std::isalnum(static_cast<unsigned char>(c)) && c != '_') {
+        if (char const c = Peek(); !std::isalnum(static_cast<unsigned char>(c)) and c != '_') {
             break;
         }
         Advance();
     }
 }
 
-Token Lexer::ScanString(SourceLocation start, std::size_t prefixLen) {
+Token Lexer::ScanString(SourceLocation const start, std::size_t prefixLen) {
     std::size_t const tokenStart = pos;
     for (std::size_t i = 0; i < prefixLen; ++i) {
         Advance();
     }
     Advance(); // consume opening  "
     std::string value;
-    while (!IsAtEnd() && Peek() != '"') {
+    while (!IsAtEnd() and Peek() != '"') {
         if (Peek() == '\n') {
             EmitError(start, "unterminated string literal");
             break;
@@ -575,13 +575,13 @@ Token Lexer::ScanString(SourceLocation start, std::size_t prefixLen) {
 }
 
 // ScanChar
-Token Lexer::ScanChar(SourceLocation start, std::size_t prefixLen) {
+Token Lexer::ScanChar(SourceLocation const start, std::size_t prefixLen) {
     std::size_t const tokenStart = pos;
     for (std::size_t i = 0; i < prefixLen; ++i) {
         Advance();
     }
     Advance(); // consume opening  '
-    if (IsAtEnd() || Peek() == '\'') {
+    if (IsAtEnd() or Peek() == '\'') {
         EmitError(start, "empty character literal");
     }
     else if (Peek() == '\\') {
@@ -629,16 +629,16 @@ std::string Lexer::ScanEscapeSequence() {
         }
         unsigned int codepoint = 0;
         int digits = 0;
-        while (!IsAtEnd() && Peek() != '}') {
+        while (!IsAtEnd() and Peek() != '}') {
             char const h = Advance();
             int val = -1;
-            if (h >= '0' && h <= '9') {
+            if (h >= '0' and h <= '9') {
                 val = h - '0';
             }
-            else if (h >= 'a' && h <= 'f') {
+            else if (h >= 'a' and h <= 'f') {
                 val = h - 'a' + 10;
             }
-            else if (h >= 'A' && h <= 'F') {
+            else if (h >= 'A' and h <= 'F') {
                 val = h - 'A' + 10;
             }
             else {
@@ -713,8 +713,8 @@ Token Lexer::ScanSymbol(SourceLocation const start) {
     case '@':
         return MakeToken(TokenKind::At, start, tokenStart);
     case '#': {
-        auto isIdentChar = [](char c) {
-            return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+        auto isIdentChar = [](char const c) {
+            return std::isalnum(static_cast<unsigned char>(c)) or c == '_';
         };
         auto tryMatch = [&](std::string_view kw) -> bool {
             for (std::size_t i = 0; i < kw.size(); ++i) {
@@ -815,7 +815,7 @@ Token Lexer::ScanSymbol(SourceLocation const start) {
         return MakeToken(Match('=') ? TokenKind::PercentAssign : TokenKind::Percent, start,
                          tokenStart);
 
-    // &  or  &=  or  &&
+    // &  or  &=  or  and
     case '&':
         if (Match('&')) {
             return MakeToken(TokenKind::AmpAmp, start, tokenStart);
@@ -825,7 +825,7 @@ Token Lexer::ScanSymbol(SourceLocation const start) {
         }
         return MakeToken(TokenKind::Amp, start, tokenStart);
 
-    // |  or  |=  or  ||
+    // |  or  |=  or  or
     case '|':
         if (Match('|')) {
             return MakeToken(TokenKind::PipePipe, start, tokenStart);

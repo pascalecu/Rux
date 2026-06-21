@@ -19,7 +19,7 @@ static constexpr std::string_view Trim(std::string_view const s) noexcept {
 
 static constexpr std::string_view Unquote(std::string_view s) noexcept {
     s = Trim(s);
-    if (s.size() >= 2 && s.front() == '"' && s.back() == '"') {
+    if (s.size() >= 2 and s.front() == '"' and s.back() == '"') {
         return s.substr(1, s.size() - 2);
     }
     return s;
@@ -30,7 +30,7 @@ static constexpr std::string_view Unquote(std::string_view s) noexcept {
 static std::string ParseInlineTableString(std::string_view val, std::string_view keyName) {
     auto const open = val.find('{');
     auto const close = val.rfind('}');
-    if (open == std::string_view::npos || close == std::string_view::npos || close <= open) {
+    if (open == std::string_view::npos or close == std::string_view::npos or close <= open) {
         return {};
     }
     std::string_view inner = val.substr(open + 1, close - open - 1);
@@ -49,13 +49,13 @@ static std::string ParseInlineTableString(std::string_view val, std::string_view
         if (c == '"') {
             inString = !inString;
         }
-        if (!inString && c == ',') {
+        if (!inString and c == ',') {
             break;
         }
         ++valueEnd;
     }
     auto const rawVal = Trim(inner.substr(eqPos + 1, valueEnd - eqPos - 1));
-    if (rawVal.size() >= 2 && rawVal.front() == '"' && rawVal.back() == '"') {
+    if (rawVal.size() >= 2 and rawVal.front() == '"' and rawVal.back() == '"') {
         return std::string(rawVal.substr(1, rawVal.size() - 2));
     }
     return std::string(rawVal);
@@ -64,7 +64,7 @@ static std::string ParseInlineTableString(std::string_view val, std::string_view
 static Dependency ParseDependency(std::string key, std::string const &value) {
     Dependency dep;
     dep.name = std::move(key);
-    if (!value.empty() && value.front() == '{') {
+    if (!value.empty() and value.front() == '{') {
         dep.package = ParseInlineTableString(value, "Package");
         dep.path = ParseInlineTableString(value, "Path");
         dep.version = ParseInlineTableString(value, "Version");
@@ -80,7 +80,7 @@ static std::optional<std::string> TargetNameFromDependenciesSection(std::string 
     {
         constexpr std::string_view prefix = "Target.";
         constexpr std::string_view suffix = ".Dependencies";
-        if (section.starts_with(prefix) && section.ends_with(suffix)) {
+        if (section.starts_with(prefix) and section.ends_with(suffix)) {
             if (section.size() <= prefix.size() + suffix.size()) {
                 return std::nullopt;
             }
@@ -107,7 +107,7 @@ static std::optional<std::string> TargetNameFromDependenciesSection(std::string 
 // Canonicalize OS names from Rux.toml section keys (e.g. "MacOS" →
 // "macOS").
 static std::string CanonicalOsName(std::string const &name) {
-    if (name == "MacOS" || name == "Macos" || name == "macos") {
+    if (name == "MacOS" or name == "Macos" or name == "macos") {
         return "macOS";
     }
     return name;
@@ -122,11 +122,11 @@ static std::string OsFromTriple(std::string const &triple) {
     if (triple.starts_with("linux")) {
         return "Linux";
     }
-    if (triple.starts_with("macos") || triple.starts_with("darwin")) {
+    if (triple.starts_with("macos") or triple.starts_with("darwin")) {
         return "macOS";
     }
-    if (triple.starts_with("freebsd") || triple.starts_with("openbsd") ||
-        triple.starts_with("netbsd") || triple.starts_with("dragonfly")) {
+    if (triple.starts_with("freebsd") or triple.starts_with("openbsd") or
+        triple.starts_with("netbsd") or triple.starts_with("dragonfly")) {
         return "BSD";
     }
     if (triple.starts_with("illumos")) {
@@ -155,7 +155,7 @@ std::optional<Manifest> Manifest::Load(std::filesystem::path const &path) {
     while (std::getline(file, line)) {
         std::string_view trimmed = Trim(line);
 
-        if (trimmed.empty() || trimmed.starts_with('#')) {
+        if (trimmed.empty() or trimmed.starts_with('#')) {
             continue;
         }
 
@@ -252,8 +252,8 @@ bool Manifest::Save(std::filesystem::path const &path) const {
     if (!dependencies.empty()) {
         file << "\n[Dependencies]\n";
         for (auto const &dep : dependencies) {
-            bool const hasPackageAlias = !dep.package.empty() && dep.package != dep.name;
-            if (!dep.path.empty() || hasPackageAlias) {
+            bool const hasPackageAlias = !dep.package.empty() and dep.package != dep.name;
+            if (!dep.path.empty() or hasPackageAlias) {
                 file << dep.name << " = { ";
                 bool wrote = false;
                 if (hasPackageAlias) {
@@ -280,8 +280,8 @@ bool Manifest::Save(std::filesystem::path const &path) const {
         }
         file << "\n[Target." << target << ".Dependencies]\n";
         for (auto const &dep : deps) {
-            bool const hasPackageAlias = !dep.package.empty() && dep.package != dep.name;
-            if (!dep.path.empty() || hasPackageAlias) {
+            bool const hasPackageAlias = !dep.package.empty() and dep.package != dep.name;
+            if (!dep.path.empty() or hasPackageAlias) {
                 file << dep.name << " = { ";
                 bool wrote = false;
                 if (hasPackageAlias) {
@@ -356,7 +356,7 @@ std::vector<Dependency> Manifest::EffectiveDependencies(std::string const &targe
     mergeFrom("*");    // wildcard dependencies
     mergeFrom(target); // exact key (e.g. "windows-x64" or "Windows")
     std::string const osName = OsFromTriple(target);
-    if (!osName.empty() && osName != target) {
+    if (!osName.empty() and osName != target) {
         mergeFrom(osName); // OS-name key (e.g. "Windows" when target is
                            // "windows-x64")
     }

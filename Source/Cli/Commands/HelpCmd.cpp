@@ -104,7 +104,7 @@ std::size_t GetTerminalWidth() {
     }
 #else
     winsize w{};
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) != -1 && w.ws_col > 0) {
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) != -1 and w.ws_col > 0) {
         return std::max(static_cast<std::size_t>(w.ws_col), Layout::MinTerminalWidth);
     }
 #endif
@@ -576,16 +576,16 @@ constexpr auto VerifyRegistryIntegrity() -> bool {
     }
 
     return std::ranges::all_of(G_COMMAND_HELP_MAPS, [](CommandDoc const &cmd) -> bool {
-        if (cmd.name.empty() || cmd.shortDesc.empty()) {
+        if (cmd.name.empty() or cmd.shortDesc.empty()) {
             return false;
         }
-        if (!cmd.description.empty() && cmd.description == cmd.shortDesc) {
+        if (!cmd.description.empty() and cmd.description == cmd.shortDesc) {
             return false;
         }
 
         bool const hasBadOptions =
             std::ranges::any_of(cmd.options, [](OptionDoc const &opt) -> bool {
-                return opt.flags.empty() || opt.desc.empty() || opt.flags.starts_with(' ') ||
+                return opt.flags.empty() or opt.desc.empty() or opt.flags.starts_with(' ') or
                        opt.flags.ends_with(' ');
             });
         if (hasBadOptions) {
@@ -594,7 +594,7 @@ constexpr auto VerifyRegistryIntegrity() -> bool {
 
         bool const hasBadUsage =
             std::ranges::any_of(cmd.usage, [](std::string_view const usage) -> bool {
-                return usage.starts_with(' ') || usage.ends_with(' ');
+                return usage.starts_with(' ') or usage.ends_with(' ');
             });
         return !hasBadUsage;
     });
@@ -638,7 +638,7 @@ void Cli::PrintHelpFor(std::string_view const command) {
 
     auto const it =
         std::ranges::lower_bound(G_COMMAND_HELP_MAPS, command, std::less<>{}, &CommandDoc::name);
-    if (it == G_COMMAND_HELP_MAPS.end() || it->name != command) {
+    if (it == G_COMMAND_HELP_MAPS.end() or it->name != command) {
         PrintUnknownCommand(command);
         return;
     }

@@ -19,7 +19,7 @@
 
 namespace Rux {
 // Internal helpers
-static std::string_view OpcodeStr(LirOpcode op) {
+static std::string_view OpcodeStr(LirOpcode const op) {
     switch (op) {
     case LirOpcode::Const:
         return "const";
@@ -88,7 +88,7 @@ static std::string_view OpcodeStr(LirOpcode op) {
     }
 }
 
-static LirOpcode BinaryOpcode(TokenKind op) {
+static LirOpcode BinaryOpcode(TokenKind const op) {
     using TK = TokenKind;
     switch (op) {
     case TK::Plus:
@@ -134,7 +134,7 @@ static LirOpcode BinaryOpcode(TokenKind op) {
     }
 }
 
-static LirOpcode CompoundOpcode(TokenKind op) {
+static LirOpcode CompoundOpcode(TokenKind const op) {
     using TK = TokenKind;
     switch (op) {
     case TK::PlusAssign:
@@ -340,7 +340,7 @@ private:
         return dst;
     }
 
-    LirReg EmitUnary(LirOpcode op, LirReg src, TypeRef const &type) {
+    LirReg EmitUnary(LirOpcode const op, LirReg src, TypeRef const &type) {
         LirReg const dst = NewReg();
         LirInstr i;
         i.dst = dst;
@@ -363,8 +363,8 @@ private:
         return dst;
     }
 
-    LirReg EmitCastIfNeeded(LirReg src, TypeRef const &fromType, TypeRef const &toType) {
-        if (src == LirNoReg || fromType.IsUnknown() || toType.IsUnknown() || fromType == toType) {
+    LirReg EmitCastIfNeeded(LirReg const src, TypeRef const &fromType, TypeRef const &toType) {
+        if (src == LirNoReg or fromType.IsUnknown() or toType.IsUnknown() or fromType == toType) {
             return src;
         }
         return EmitCast(src, fromType, toType);
@@ -405,17 +405,17 @@ private:
     }
 
     [[nodiscard]] bool IsInterfaceType(TypeRef const &t) const {
-        return t.kind == TypeRef::Kind::Named && interfacesByName.contains(t.name);
+        return t.kind == TypeRef::Kind::Named and interfacesByName.contains(t.name);
     }
 
     static bool IsSliceType(TypeRef const &type) {
-        return type.kind == TypeRef::Kind::Slice ||
-               (type.kind == TypeRef::Kind::Named && type.name.starts_with("Slice<"));
+        return type.kind == TypeRef::Kind::Slice or
+               (type.kind == TypeRef::Kind::Named and type.name.starts_with("Slice<"));
     }
 
     static bool IsStringSliceLiteral(HirLiteralExpr const &e) {
-        return e.type.kind == TypeRef::Kind::Named &&
-               (e.type.name == "Slice<char8>" || e.type.name == "Slice<char16>" ||
+        return e.type.kind == TypeRef::Kind::Named and
+               (e.type.name == "Slice<char8>" or e.type.name == "Slice<char16>" or
                 e.type.name == "Slice<char32>");
     }
 
@@ -628,7 +628,7 @@ private:
             if (!s->pattern) {
                 locals[s->name] = slot;
             }
-            if (!s->init && s->stackBufferLength != 0) {
+            if (!s->init and s->stackBufferLength != 0) {
                 LirReg data = EmitAlloca(s->stackBufferElementType, s->stackBufferLength);
                 LirReg dataField =
                     EmitFieldPtr(slot, "data", TypeRef::MakePointer(s->stackBufferElementType));
@@ -655,7 +655,7 @@ private:
             if (s->value) {
                 LirReg val = LowerExpr(**s->value);
                 TypeRef retType = fn ? fn->returnType : (*s->value)->type;
-                if (val != LirNoReg && !retType.IsUnknown() && (*s->value)->type != retType) {
+                if (val != LirNoReg and !retType.IsUnknown() and (*s->value)->type != retType) {
                     LirReg casted = NewReg();
                     LirInstr cast;
                     cast.dst = casted;
@@ -868,7 +868,7 @@ private:
     void LowerFor(HirForStmt const &s) {
         bool const isRange = s.iterable->type.IsRange();
         TypeRef const elemType =
-            (isRange && !s.iterable->type.inner.empty()) ? s.iterable->type.inner[0] : s.varType;
+            (isRange and !s.iterable->type.inner.empty()) ? s.iterable->type.inner[0] : s.varType;
 
         LirReg slot = EmitAlloca(s.varType);
         locals[s.variable] = slot;
@@ -1059,7 +1059,8 @@ private:
     // Pattern lowering
     // Returns a bool register: 1 if the pattern matches `subjectVal`.
     // Side-effects: binds pattern variables into locals
-    void BindLetPattern(HirPattern const &pat, LirReg subjectPtr, TypeRef const &subjectType) {
+    void BindLetPattern(HirPattern const &pat, LirReg const subjectPtr,
+                        TypeRef const &subjectType) {
         if (dynamic_cast<HirWildcardPattern const *>(&pat)) {
             return;
         }
@@ -1076,7 +1077,7 @@ private:
         if (auto *p = dynamic_cast<HirTuplePattern const *>(&pat)) {
             for (std::size_t i = 0; i < p->elements.size(); ++i) {
                 TypeRef elemType = TypeRef::MakeUnknown();
-                if (subjectType.kind == TypeRef::Kind::Tuple && i < subjectType.inner.size()) {
+                if (subjectType.kind == TypeRef::Kind::Tuple and i < subjectType.inner.size()) {
                     elemType = subjectType.inner[i];
                 }
                 LirReg elemPtr = EmitFieldPtr(subjectPtr, std::to_string(i), elemType);
@@ -1085,7 +1086,7 @@ private:
         }
     }
 
-    LirReg LowerPattern(HirPattern const &pat, LirReg subjectVal, TypeRef const &subjectType,
+    LirReg LowerPattern(HirPattern const &pat, LirReg const subjectVal, TypeRef const &subjectType,
                         std::vector<LirReg> const *enumPayload = nullptr) {
         if (dynamic_cast<HirWildcardPattern const *>(&pat)) {
             return EmitConst("1", TypeRef::MakeBool());
@@ -1125,7 +1126,7 @@ private:
         // support beyond what this IR stage provides.
         if (auto *p = dynamic_cast<HirEnumPattern const *>(&pat)) {
             LirReg tagValue = subjectVal;
-            if (!p->unitDiscriminants.empty() || p->discriminant) {
+            if (!p->unitDiscriminants.empty() or p->discriminant) {
                 LirReg mask = EmitConst("4294967295", TypeRef::MakeInt64());
                 tagValue = EmitBinary(LirOpcode::And, subjectVal, mask, TypeRef::MakeInt64());
             }
@@ -1138,7 +1139,7 @@ private:
                     LirReg payload = LirNoReg;
                     std::size_t const payloadIndex =
                         i < p->argIndices.size() ? p->argIndices[i] : i;
-                    if (enumPayload && payloadIndex < enumPayload->size()) {
+                    if (enumPayload and payloadIndex < enumPayload->size()) {
                         payload = EmitLoad((*enumPayload)[payloadIndex], bindType);
                     }
                     else {
@@ -1323,9 +1324,9 @@ private:
         LirReg const ptr = LowerLValue(*e.operand);
         LirReg const old_val = EmitLoad(ptr, e.type);
         LirReg delta = EmitConst("1", e.type);
-        if (e.type.kind == TypeRef::Kind::Pointer && !e.type.inner.empty()) {
+        if (e.type.kind == TypeRef::Kind::Pointer and !e.type.inner.empty()) {
             auto const elemSize = e.type.inner[0].SizeInBytes();
-            if (elemSize && *elemSize > 1) {
+            if (elemSize and *elemSize > 1) {
                 LirReg const sz = EmitConst(std::to_string(*elemSize), e.type);
                 delta = EmitBinary(LirOpcode::Mul, delta, sz, e.type);
             }
@@ -1370,9 +1371,9 @@ private:
             LirReg const ptr = LowerLValue(*e.operand);
             LirReg const old_val = EmitLoad(ptr, e.type);
             LirReg delta = EmitConst("1", e.type);
-            if (e.type.kind == TypeRef::Kind::Pointer && !e.type.inner.empty()) {
+            if (e.type.kind == TypeRef::Kind::Pointer and !e.type.inner.empty()) {
                 auto const elemSize = e.type.inner[0].SizeInBytes();
-                if (elemSize && *elemSize > 1) {
+                if (elemSize and *elemSize > 1) {
                     LirReg const sz = EmitConst(std::to_string(*elemSize), e.type);
                     delta = EmitBinary(LirOpcode::Mul, delta, sz, e.type);
                 }
@@ -1391,7 +1392,7 @@ private:
         using TK = TokenKind;
         // Short-circuit operators: branch to avoid evaluating the
         // right-hand side.
-        if (e.op == TK::AmpAmp || e.op == TK::PipePipe) {
+        if (e.op == TK::AmpAmp or e.op == TK::PipePipe) {
             LirReg lhs = LowerExpr(*e.left);
             std::uint32_t rhsBlock = NewBlock(e.op == TK::AmpAmp ? "land.rhs" : "lor.rhs");
             std::uint32_t shortBlock = NewBlock(e.op == TK::AmpAmp ? "land.short" : "lor.short");
@@ -1427,10 +1428,10 @@ private:
         LirReg const rhs = LowerExpr(*e.right);
 
         // Scale integer operand by element size for pointer arithmetic.
-        if ((e.op == TK::Plus || e.op == TK::Minus) && e.type.kind == TypeRef::Kind::Pointer &&
+        if ((e.op == TK::Plus or e.op == TK::Minus) and e.type.kind == TypeRef::Kind::Pointer and
             !e.type.inner.empty()) {
             auto const elemSize = e.type.inner[0].SizeInBytes();
-            if (elemSize && *elemSize > 1) {
+            if (elemSize and *elemSize > 1) {
                 if (e.left->type.kind == TypeRef::Kind::Pointer) {
                     // ptr + int or ptr - int: scale the right (integer)
                     // operand
@@ -1451,7 +1452,7 @@ private:
     }
 
     LirReg LowerAssign(HirAssignExpr const &e) {
-        if (e.op == TokenKind::Assign && (IsInterfaceType(e.type) || IsSliceType(e.type))) {
+        if (e.op == TokenKind::Assign and (IsInterfaceType(e.type) or IsSliceType(e.type))) {
             LirReg const ptr = LowerLValue(*e.target);
             StoreExprIntoSlot(*e.value, ptr, e.type);
             return ptr;
@@ -1461,9 +1462,9 @@ private:
         if (e.op != TokenKind::Assign) {
             // Compound assignment: load current value, compute, then store.
             LirReg const current = LowerExpr(*e.target);
-            if (e.type.kind == TypeRef::Kind::Pointer && !e.type.inner.empty()) {
+            if (e.type.kind == TypeRef::Kind::Pointer and !e.type.inner.empty()) {
                 auto const elemSize = e.type.inner[0].SizeInBytes();
-                if (elemSize && *elemSize > 1) {
+                if (elemSize and *elemSize > 1) {
                     LirReg const sz = EmitConst(std::to_string(*elemSize), e.type);
                     val = EmitBinary(LirOpcode::Mul, val, sz, e.type);
                 }
@@ -1479,7 +1480,7 @@ private:
     }
 
     static TypeRef SliceElementTypeFromType(TypeRef const &type) {
-        if (type.kind == TypeRef::Kind::Slice && !type.inner.empty()) {
+        if (type.kind == TypeRef::Kind::Slice and !type.inner.empty()) {
             return type.inner[0];
         }
         if (type.kind == TypeRef::Kind::Named) {
@@ -1490,10 +1491,10 @@ private:
                 return TypeRef::MakeChar32();
             }
             constexpr std::string_view prefix = "Slice<";
-            if (type.name.starts_with(prefix) && type.name.ends_with(">")) {
+            if (type.name.starts_with(prefix) and type.name.ends_with(">")) {
                 std::string const elemName =
                     type.name.substr(prefix.size(), type.name.size() - prefix.size() - 1);
-                if (elemName == "bool" || elemName == "bool8") {
+                if (elemName == "bool" or elemName == "bool8") {
                     return TypeRef::MakeBool();
                 }
                 if (elemName == "char8") {
@@ -1502,7 +1503,7 @@ private:
                 if (elemName == "char16") {
                     return TypeRef::MakeChar16();
                 }
-                if (elemName == "char32" || elemName == "char") {
+                if (elemName == "char32" or elemName == "char") {
                     return TypeRef::MakeChar();
                 }
                 if (elemName == "int8") {
@@ -1547,7 +1548,7 @@ private:
         return TypeRef::MakeChar8();
     }
 
-    void CopySliceValue(LirReg srcSlot, LirReg dstSlot, TypeRef const &sliceType) {
+    void CopySliceValue(LirReg const srcSlot, LirReg const dstSlot, TypeRef const &sliceType) {
         TypeRef const elemType = SliceElementTypeFromType(sliceType);
         TypeRef const dataType = TypeRef::MakePointer(elemType);
 
@@ -1562,7 +1563,7 @@ private:
         EmitStore(len, dstLenPtr, TypeRef::MakeUInt64());
     }
 
-    void StoreTernaryInit(HirTernaryExpr const &e, LirReg slot, TypeRef const &type) {
+    void StoreTernaryInit(HirTernaryExpr const &e, LirReg const slot, TypeRef const &type) {
         LirReg cond = LowerExpr(*e.condition);
         std::uint32_t const thenBlock = NewBlock("ternary.store.then");
         std::uint32_t const elseBlock = NewBlock("ternary.store.else");
@@ -1580,7 +1581,7 @@ private:
         SetBlock(mergeBlock);
     }
 
-    void StoreExprIntoSlot(HirExpr const &expr, LirReg slot, TypeRef const &type) {
+    void StoreExprIntoSlot(HirExpr const &expr, LirReg const slot, TypeRef const &type) {
         if (auto *init = dynamic_cast<HirStructInitExpr const *>(&expr)) {
             StoreStructInit(*init, slot);
             return;
@@ -1610,7 +1611,7 @@ private:
             return;
         }
         if (auto *initLitExpr = dynamic_cast<HirLiteralExpr const *>(&expr);
-            initLitExpr && IsStringSliceLiteral(*initLitExpr)) {
+            initLitExpr and IsStringSliceLiteral(*initLitExpr)) {
             StoreStringLiteralSlice(*initLitExpr, slot);
             return;
         }
@@ -1671,7 +1672,7 @@ private:
         return result;
     }
 
-    void StoreMatchInit(HirMatchExpr const &e, LirReg slot, TypeRef const &type) {
+    void StoreMatchInit(HirMatchExpr const &e, LirReg const slot, TypeRef const &type) {
         LirReg const subjectVal = LowerExpr(*e.subject);
         std::vector<LirReg> const *subjectPayload = nullptr;
         if (auto *subjectVar = dynamic_cast<HirVarExpr const *>(e.subject.get())) {
@@ -1720,7 +1721,7 @@ private:
     }
 
     // Fill an existing 16-byte fat-pointer slot with {&concrete, &vtable}.
-    void StoreCoerceToInterface(HirCoerceToInterfaceExpr const &e, LirReg slot) {
+    void StoreCoerceToInterface(HirCoerceToInterfaceExpr const &e, LirReg const slot) {
         LirReg val = LowerExpr(*e.value);
         LirReg concreteSlot = EmitAlloca(e.value->type);
         EmitStore(val, concreteSlot, e.value->type);
@@ -1792,7 +1793,7 @@ private:
             return EmitConst(e.discriminant, TypeRef::MakeInt64());
         }
         LirReg payload = LowerExpr(*e.payloads[0]);
-        if (e.payloads[0]->type.kind != TypeRef::Kind::Int64 &&
+        if (e.payloads[0]->type.kind != TypeRef::Kind::Int64 and
             e.payloads[0]->type.kind != TypeRef::Kind::Int) {
             payload = EmitCast(payload, e.payloads[0]->type, TypeRef::MakeInt64());
         }
@@ -1849,7 +1850,7 @@ private:
         return dst;
     }
 
-    void StoreRangeInit(HirRangeExpr const &e, LirReg slot) {
+    void StoreRangeInit(HirRangeExpr const &e, LirReg const slot) {
         TypeRef const elemType = e.type.inner.empty() ? TypeRef::MakeInt64() : e.type.inner[0];
         if (e.lo) {
             LirReg const loVal = LowerExpr(*e.lo);
@@ -1878,7 +1879,7 @@ private:
         return EmitLoad(slot, e.type);
     }
 
-    void StoreStructInit(HirStructInitExpr const &e, LirReg slot) {
+    void StoreStructInit(HirStructInitExpr const &e, LirReg const slot) {
         for (auto const &f : e.fields) {
             LirReg const ptr = EmitFieldPtr(slot, f.name, f.value->type);
             StoreExprIntoSlot(*f.value, ptr, f.value->type);
@@ -1897,7 +1898,7 @@ private:
         return slot;
     }
 
-    void StoreTupleInit(HirTupleExpr const &e, LirReg slot) {
+    void StoreTupleInit(HirTupleExpr const &e, LirReg const slot) {
         for (std::size_t i = 0; i < e.elements.size(); ++i) {
             LirReg const ptr = EmitFieldPtr(slot, std::to_string(i), e.elements[i]->type);
             StoreExprIntoSlot(*e.elements[i], ptr, e.elements[i]->type);
@@ -1910,7 +1911,7 @@ private:
         return slot;
     }
 
-    void StoreStringLiteralSlice(HirLiteralExpr const &e, LirReg slot) {
+    void StoreStringLiteralSlice(HirLiteralExpr const &e, LirReg const slot) {
         TypeRef const elemType = StringSliceElementType(e);
         LirReg const data = EmitAlloca(elemType);
         fn->blocks[cur].instrs.back().strArg = std::to_string(e.value.size());
@@ -1928,9 +1929,9 @@ private:
         EmitStore(len, lenField, TypeRef::MakeUInt64());
     }
 
-    void StoreSliceInit(HirSliceExpr const &e, LirReg slot) {
+    void StoreSliceInit(HirSliceExpr const &e, LirReg const slot) {
         TypeRef elemType = e.elementType;
-        if (elemType.IsUnknown() && !e.elements.empty()) {
+        if (elemType.IsUnknown() and !e.elements.empty()) {
             elemType = e.elements.front()->type;
         }
         LirReg data = EmitAlloca(elemType);

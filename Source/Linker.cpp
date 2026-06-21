@@ -59,29 +59,29 @@ namespace Rux {
 // Buffer helpers
 using Buf = std::vector<uint8_t>;
 
-[[maybe_unused]] static void WriteU8(Buf &b, uint8_t v) {
+[[maybe_unused]] static void WriteU8(Buf &b, uint8_t const v) {
     b.push_back(v);
 }
 
-[[maybe_unused]] static void WriteU16(Buf &b, uint16_t v) {
+[[maybe_unused]] static void WriteU16(Buf &b, uint16_t const v) {
     b.push_back(v & 0xFF);
     b.push_back(v >> 8);
 }
 
-[[maybe_unused]] static void WriteU32(Buf &b, uint32_t v) {
+[[maybe_unused]] static void WriteU32(Buf &b, uint32_t const v) {
     b.push_back(v & 0xFF);
     b.push_back((v >> 8) & 0xFF);
     b.push_back((v >> 16) & 0xFF);
     b.push_back((v >> 24) & 0xFF);
 }
 
-[[maybe_unused]] static void WriteU64(Buf &b, uint64_t v) {
+[[maybe_unused]] static void WriteU64(Buf &b, uint64_t const v) {
     for (int i = 0; i < 8; ++i) {
         b.push_back(static_cast<uint8_t>(v >> (i * 8)));
     }
 }
 
-[[maybe_unused]] static void WriteZeros(Buf &b, size_t n) {
+[[maybe_unused]] static void WriteZeros(Buf &b, size_t const n) {
     b.insert(b.end(), n, 0);
 }
 
@@ -99,24 +99,24 @@ using Buf = std::vector<uint8_t>;
     }
 }
 
-[[maybe_unused]] static void PadTo(Buf &b, size_t align, uint8_t fill = 0) {
+[[maybe_unused]] static void PadTo(Buf &b, size_t const align, uint8_t const fill = 0) {
     while (b.size() % align) {
         b.push_back(fill);
     }
 }
 
-[[maybe_unused]] static uint32_t AlignUp(uint32_t v, uint32_t a) {
+[[maybe_unused]] static uint32_t AlignUp(uint32_t const v, uint32_t const a) {
     return (v + a - 1) & ~(a - 1);
 }
 
-static void Patch32(Buf &b, size_t off, uint32_t v) {
+static void Patch32(Buf &b, size_t const off, uint32_t const v) {
     b[off] = v & 0xFF;
     b[off + 1] = (v >> 8) & 0xFF;
     b[off + 2] = (v >> 16) & 0xFF;
     b[off + 3] = (v >> 24) & 0xFF;
 }
 
-static void Patch64(Buf &b, size_t off, uint64_t v) {
+static void Patch64(Buf &b, size_t const off, uint64_t const v) {
     for (int i = 0; i < 8; ++i) {
         b[off + i] = static_cast<uint8_t>(v >> (i * 8));
     }
@@ -142,7 +142,7 @@ static std::optional<Buf> ReadFileBytes(std::filesystem::path const &path) {
     if (!data.empty()) {
         in.read(reinterpret_cast<char *>(data.data()), static_cast<std::streamsize>(data.size()));
     }
-    if (!in && !in.eof()) {
+    if (!in and !in.eof()) {
         return std::nullopt;
     }
     return data;
@@ -170,13 +170,13 @@ static std::optional<size_t> PeRvaToOffset(Buf const &pe, uint32_t rva, size_t s
     for (uint16_t i = 0; i < sectionCount; ++i) {
         size_t const sec = sectionTable + static_cast<size_t>(i) * 40;
         uint32_t virtualSize = 0, virtualAddress = 0, rawSize = 0, rawPtr = 0;
-        if (!ReadU32At(pe, sec + 8, virtualSize) || !ReadU32At(pe, sec + 12, virtualAddress) ||
-            !ReadU32At(pe, sec + 16, rawSize) || !ReadU32At(pe, sec + 20, rawPtr)) {
+        if (!ReadU32At(pe, sec + 8, virtualSize) or !ReadU32At(pe, sec + 12, virtualAddress) or
+            !ReadU32At(pe, sec + 16, rawSize) or !ReadU32At(pe, sec + 20, rawPtr)) {
             return std::nullopt;
         }
 
         uint32_t const span = std::max(virtualSize, rawSize);
-        if (rva >= virtualAddress && rva < virtualAddress + span) {
+        if (rva >= virtualAddress and rva < virtualAddress + span) {
             size_t const off = static_cast<size_t>(rawPtr) + (rva - virtualAddress);
             if (off < pe.size()) {
                 return off;
@@ -192,7 +192,7 @@ static bool ReadPeCString(Buf const &pe, size_t off, std::string &out) {
         return false;
     }
     out.clear();
-    while (off < pe.size() && pe[off] != 0) {
+    while (off < pe.size() and pe[off] != 0) {
         out.push_back(static_cast<char>(pe[off++]));
     }
     return off < pe.size();
@@ -207,17 +207,17 @@ ReadDllExports(std::filesystem::path const &path) {
     Buf const &pe = *peData;
 
     uint32_t peOff32 = 0;
-    if (pe.size() < 0x40 || !ReadU32At(pe, 0x3C, peOff32)) {
+    if (pe.size() < 0x40 or !ReadU32At(pe, 0x3C, peOff32)) {
         return std::nullopt;
     }
     size_t const peOff = peOff32;
-    if (peOff + 24 > pe.size() || pe[peOff] != 'P' || pe[peOff + 1] != 'E' || pe[peOff + 2] != 0 ||
+    if (peOff + 24 > pe.size() or pe[peOff] != 'P' or pe[peOff + 1] != 'E' or pe[peOff + 2] != 0 or
         pe[peOff + 3] != 0) {
         return std::nullopt;
     }
 
     uint16_t sectionCount = 0, optionalSize = 0, magic = 0;
-    if (!ReadU16At(pe, peOff + 6, sectionCount) || !ReadU16At(pe, peOff + 20, optionalSize) ||
+    if (!ReadU16At(pe, peOff + 6, sectionCount) or !ReadU16At(pe, peOff + 20, optionalSize) or
         !ReadU16At(pe, peOff + 24, magic)) {
         return std::nullopt;
     }
@@ -225,24 +225,24 @@ ReadDllExports(std::filesystem::path const &path) {
     size_t const optionalOff = peOff + 24;
     size_t const dataDirOff = magic == 0x020B ? optionalOff + 112 : optionalOff + 96;
     uint32_t exportRva = 0, exportSize = 0;
-    if (dataDirOff + 8 > optionalOff + optionalSize || !ReadU32At(pe, dataDirOff, exportRva) ||
+    if (dataDirOff + 8 > optionalOff + optionalSize or !ReadU32At(pe, dataDirOff, exportRva) or
         !ReadU32At(pe, dataDirOff + 4, exportSize)) {
         return std::nullopt;
     }
 
     std::unordered_set<std::string> exports;
-    if (exportRva == 0 || exportSize == 0) {
+    if (exportRva == 0 or exportSize == 0) {
         return exports;
     }
 
     size_t const sectionTable = optionalOff + optionalSize;
     auto exportOff = PeRvaToOffset(pe, exportRva, sectionTable, sectionCount);
-    if (!exportOff || *exportOff + 40 > pe.size()) {
+    if (!exportOff or *exportOff + 40 > pe.size()) {
         return std::nullopt;
     }
 
     uint32_t nameCount = 0, namesRva = 0;
-    if (!ReadU32At(pe, *exportOff + 24, nameCount) || !ReadU32At(pe, *exportOff + 32, namesRva)) {
+    if (!ReadU32At(pe, *exportOff + 24, nameCount) or !ReadU32At(pe, *exportOff + 32, namesRva)) {
         return std::nullopt;
     }
 
@@ -277,7 +277,7 @@ static std::string GetPathEnv() {
 #if RUX_COMPILER_MSVC
     char *value = nullptr;
     size_t size = 0;
-    if (_dupenv_s(&value, &size, "PATH") != 0 || value == nullptr) {
+    if (_dupenv_s(&value, &size, "PATH") != 0 or value == nullptr) {
         return {};
     }
     std::unique_ptr<char, decltype(&std::free)> owned(value, &std::free);
@@ -340,7 +340,7 @@ FindDllFile(std::string const &dll, std::vector<std::filesystem::path> const &se
     {
         wchar_t sysDir[MAX_PATH];
         const UINT len = GetSystemDirectoryW(sysDir, MAX_PATH);
-        if (len > 0 && len < MAX_PATH) {
+        if (len > 0 and len < MAX_PATH) {
             if (auto hit = probe(std::filesystem::path(std::wstring(sysDir, len)))) {
                 return hit;
             }
@@ -365,7 +365,7 @@ FindDllFile(std::string const &dll, std::vector<std::filesystem::path> const &se
 }
 
 Linker::Linker(std::vector<RcuFile> objects, std::string packageName,
-               std::vector<std::filesystem::path> importSearchDirs, bool isDll)
+               std::vector<std::filesystem::path> importSearchDirs, bool const isDll)
     : objects(std::move(objects))
     , packageName(std::move(packageName))
     , importSearchDirs(std::move(importSearchDirs))
@@ -398,7 +398,7 @@ bool Linker::Link(std::filesystem::path const &outputPath) {
     // carries the DLL name.
     for (auto const &obj : objects) {
         for (auto const &sym : obj.symbols) {
-            if (sym.kind == RcuSymKind::ExternFunc && !sym.typeName.empty()) {
+            if (sym.kind == RcuSymKind::ExternFunc and !sym.typeName.empty()) {
                 importDll[sym.name] = sym.typeName;
                 explicitImportDlls.insert(sym.typeName);
                 explicitImportFuncsByDll[sym.typeName].push_back(sym.name);
@@ -413,7 +413,7 @@ bool Linker::Link(std::filesystem::path const &outputPath) {
     std::unordered_set<std::string> definedSymbols;
     for (auto const &obj : objects) {
         for (auto const &sym : obj.symbols) {
-            if (sym.kind != RcuSymKind::ExternFunc && sym.kind != RcuSymKind::ExternData &&
+            if (sym.kind != RcuSymKind::ExternFunc and sym.kind != RcuSymKind::ExternData and
                 !sym.name.empty()) {
                 definedSymbols.insert(sym.name);
             }
@@ -432,7 +432,7 @@ bool Linker::Link(std::filesystem::path const &outputPath) {
                     continue;
                 }
                 auto const &sym = obj.symbols[reloc.symbolIndex];
-                if (sym.kind == RcuSymKind::ExternFunc && !definedSymbols.count(sym.name)) {
+                if (sym.kind == RcuSymKind::ExternFunc and !definedSymbols.count(sym.name)) {
                     importDll.try_emplace(sym.name, "KERNEL32.DLL");
                 }
             }
@@ -688,10 +688,10 @@ bool Linker::Link(std::filesystem::path const &outputPath) {
             if (sym.name.empty()) {
                 continue;
             }
-            if (sym.kind == RcuSymKind::ExternFunc || sym.kind == RcuSymKind::ExternData) {
+            if (sym.kind == RcuSymKind::ExternFunc or sym.kind == RcuSymKind::ExternData) {
                 continue; // already handled via thunks
             }
-            if (sym.visibility == RcuSymVis::Local && sym.kind != RcuSymKind::Func &&
+            if (sym.visibility == RcuSymVis::Local and sym.kind != RcuSymKind::Func and
                 sym.name != "Main") {
                 continue;
             }
@@ -814,7 +814,7 @@ bool Linker::Link(std::filesystem::path const &outputPath) {
                     }
                     targetVA = it->second;
                 }
-                else if (sym.visibility != RcuSymVis::Local && !sym.name.empty() &&
+                else if (sym.visibility != RcuSymVis::Local and !sym.name.empty() and
                          symMap.count(sym.name)) {
                     // Named exported symbol, including cross-module
                     // references.
@@ -871,8 +871,8 @@ bool Linker::Link(std::filesystem::path const &outputPath) {
     if (isDll) {
         for (auto const &obj : objects) {
             for (auto const &sym : obj.symbols) {
-                if (sym.kind == RcuSymKind::Func && sym.visibility != RcuSymVis::Local &&
-                    !sym.name.empty() && sym.name != "DllMain" && symMap.count(sym.name)) {
+                if (sym.kind == RcuSymKind::Func and sym.visibility != RcuSymVis::Local and
+                    !sym.name.empty() and sym.name != "DllMain" and symMap.count(sym.name)) {
                     exportNames.push_back(sym.name);
                 }
             }
@@ -884,7 +884,7 @@ bool Linker::Link(std::filesystem::path const &outputPath) {
     // Build export directory data (appended to .rdata)
     uint32_t exportDirOff = 0;
     uint32_t exportDirSize = 0;
-    if (isDll && !exportNames.empty()) {
+    if (isDll and !exportNames.empty()) {
         exportDirOff = static_cast<uint32_t>(rdataBuf.size());
         uint32_t const numExports = static_cast<uint32_t>(exportNames.size());
 
@@ -976,7 +976,7 @@ bool Linker::Link(std::filesystem::path const &outputPath) {
     auto const wSec8 = [&](char const *s) {
         char buf8[8] = {};
         size_t len = std::strlen(s);
-        for (size_t k = 0; k < 8 && k < len; ++k) {
+        for (size_t k = 0; k < 8 and k < len; ++k) {
             buf8[k] = s[k];
         }
         writeRaw(buf8, 8);
@@ -1037,8 +1037,8 @@ bool Linker::Link(std::filesystem::path const &outputPath) {
     wU32(16);          // NumberOfRvaAndSizes
     // DataDirectory[16]
     // [0] Export — filled for DLLs, empty for EXEs
-    wDir(isDll && exportDirSize > 0 ? rdataRva + exportDirOff : 0,
-         isDll && exportDirSize > 0 ? exportDirSize : 0);
+    wDir(isDll and exportDirSize > 0 ? rdataRva + exportDirOff : 0,
+         isDll and exportDirSize > 0 ? exportDirSize : 0);
     wDir(rdataRva + importDirOff,
          static_cast<uint32_t>((importDllNames.size() + 1) * 20)); // [1]  Import
     wDir(0, 0);
@@ -1107,7 +1107,7 @@ bool Linker::Link(std::filesystem::path const &outputPath) {
 static std::optional<Buf> LinuxCompatThunk(std::string const &name) {
     static std::unordered_map<std::string, Buf> const thunks = {
         {"ExitProcess",
-         {0x48, 0x89, 0xCF, 0xB8, RUX_IS_BSD || RUX_IS_SUNOS ? 0x01 : 0x3C, 0x00, 0x00, 0x00, 0x0F,
+         {0x48, 0x89, 0xCF, 0xB8, RUX_IS_BSD or RUX_IS_SUNOS ? 0x01 : 0x3C, 0x00, 0x00, 0x00, 0x0F,
           0x05}},
         {"GetStdHandle",
          {
@@ -1140,7 +1140,7 @@ static std::optional<Buf> LinuxCompatThunk(std::string const &name) {
                        0xB8, 0xDD, 0x01, 0x00, 0x00, 0x0F,
     #elif RUX_OS_OPENBSD
                        0xB8, 0x31, 0x00, 0x00, 0x00, 0x0F,
-    #elif RUX_OS_DRAGONFLY || RUX_OS_NETBSD
+    #elif RUX_OS_DRAGONFLY or RUX_OS_NETBSD
                        0xB8, 0xC5, 0x00, 0x00, 0x00, 0x0F,
     #elif RUX_IS_SUNOS
                        0xB8, 0x73, 0x00, 0x00, 0x00, 0x0F,
@@ -1162,7 +1162,7 @@ static std::optional<Buf> LinuxCompatThunk(std::string const &name) {
           0xB8, 0xDD, 0x01, 0x00, 0x00, 0x0F,
     #elif RUX_OS_OPENBSD
           0xB8, 0x31, 0x00, 0x00, 0x00, 0x0F,
-    #elif RUX_OS_DRAGONFLY || RUX_OS_NETBSD
+    #elif RUX_OS_DRAGONFLY or RUX_OS_NETBSD
           0xB8, 0xC5, 0x00, 0x00, 0x00, 0x0F,
     #elif RUX_IS_SUNOS
           0xB8, 0x73, 0x00, 0x00, 0x00, 0x0F,
@@ -1250,7 +1250,7 @@ static std::optional<Buf> LinuxCompatThunk(std::string const &name) {
         {"WriteConsoleW",
          {0x41, 0x54, 0x41, 0x55, 0x48, 0x83, 0xEC, 0x08, 0x49, 0x89, 0xD4, 0x4D, 0x89,
           0xC5, 0x4D, 0x85, 0xED, 0x74, 0x24, 0x41, 0x8A, 0x04, 0x24, 0x88, 0x04, 0x24,
-    #if RUX_IS_BSD || RUX_IS_SUNOS
+    #if RUX_IS_BSD or RUX_IS_SUNOS
           0xB8, 0x04, 0x00, 0x00, 0x00, 0xBF,
     #else
           0xB8, 0x01, 0x00, 0x00, 0x00, 0xBF,
@@ -1266,7 +1266,7 @@ static std::optional<Buf> LinuxCompatThunk(std::string const &name) {
              0xD6, // mov rsi, rdx  (buf)
              0x4C, 0x89,
              0xC2, // mov rdx, r8   (count)
-    #if RUX_IS_BSD || RUX_IS_SUNOS
+    #if RUX_IS_BSD or RUX_IS_SUNOS
              0xB8, 0x03, 0x00, 0x00,
              0x00, // mov eax, 3 (SYS_read)
     #else
@@ -1308,7 +1308,7 @@ static std::optional<Buf> LinuxCompatThunk(std::string const &name) {
              0xD6, // mov rsi, rdx  (buf)
              0x4C, 0x89,
              0xC2, // mov rdx, r8   (count)
-    #if RUX_IS_BSD || RUX_IS_SUNOS
+    #if RUX_IS_BSD or RUX_IS_SUNOS
              0xB8, 0x04, 0x00, 0x00,
              0x00, // mov eax, 4 (SYS_write)
     #else
@@ -1446,7 +1446,7 @@ static std::optional<Buf> LinuxCompatThunk(std::string const &name) {
          }},
         {"__rux_bsd_nanosleep",
          {
-        #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+        #if defined(__FreeBSD__) or defined(__NetBSD__) or defined(__DragonFly__)
              0x48, 0xC7, 0xC0, 0xF0, 0x00, 0x00,
              0x00, // mov rax, 240
         #elif defined(__OpenBSD__)
@@ -1463,7 +1463,7 @@ static std::optional<Buf> LinuxCompatThunk(std::string const &name) {
          }},
         {"__rux_bsd_clock_gettime",
          {
-        #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+        #if defined(__FreeBSD__) or defined(__NetBSD__) or defined(__DragonFly__)
              0x48, 0xC7, 0xC0, 0xE8, 0x00, 0x00,
              0x00, // mov rax, 232
         #elif defined(__OpenBSD__)
@@ -1480,7 +1480,7 @@ static std::optional<Buf> LinuxCompatThunk(std::string const &name) {
          }},
         {"__rux_bsd_mmap",
          {
-        #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+        #if defined(__FreeBSD__) or defined(__NetBSD__) or defined(__DragonFly__)
              0x48, 0xC7, 0xC0, 0xDD, 0x01, 0x00, 0x00, // mov rax, 477
         #elif defined(__OpenBSD__)
              0x48, 0xC7, 0xC0, 0xC5, 0x00, 0x00, 0x00, // mov rax, 197
@@ -1496,7 +1496,7 @@ static std::optional<Buf> LinuxCompatThunk(std::string const &name) {
          }},
         {"__rux_bsd_const_MAP_ANONYMOUS",
          {
-        #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+        #if defined(__FreeBSD__) or defined(__NetBSD__) or defined(__DragonFly__)
              0xB8, 0x00, 0x10, 0x00,
              0x00, // mov eax, 4096
         #elif defined(__OpenBSD__)
@@ -1507,7 +1507,7 @@ static std::optional<Buf> LinuxCompatThunk(std::string const &name) {
          }},
         {"__rux_bsd_const_CLOCK_MONOTONIC",
          {
-        #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+        #if defined(__FreeBSD__) or defined(__NetBSD__) or defined(__DragonFly__)
              0xB8, 0x04, 0x00, 0x00,
              0x00, // mov eax, 4
         #elif defined(__OpenBSD__)
@@ -1541,7 +1541,7 @@ bool Linker::LinkElf64(std::filesystem::path const &outputPath) {
     std::unordered_set<std::string> linuxCompatExterns;
     for (auto const &obj : objects) {
         for (auto const &sym : obj.symbols) {
-            if (sym.kind != RcuSymKind::ExternFunc && sym.kind != RcuSymKind::ExternData &&
+            if (sym.kind != RcuSymKind::ExternFunc and sym.kind != RcuSymKind::ExternData and
                 !sym.name.empty()) {
                 definedSymbols.insert(sym.name);
             }
@@ -1555,7 +1555,7 @@ bool Linker::LinkElf64(std::filesystem::path const &outputPath) {
                     continue;
                 }
                 auto const &sym = obj.symbols[reloc.symbolIndex];
-                if ((sym.kind == RcuSymKind::ExternFunc || sym.kind == RcuSymKind::ExternData) &&
+                if ((sym.kind == RcuSymKind::ExternFunc or sym.kind == RcuSymKind::ExternData) and
                     !definedSymbols.contains(sym.name)) {
                     if (LinuxCompatThunk(sym.name)) {
                         linuxCompatExterns.insert(sym.name);
@@ -1580,7 +1580,7 @@ bool Linker::LinkElf64(std::filesystem::path const &outputPath) {
     textPre.insert(textPre.end(), {0xE8, 0x00, 0x00, 0x00, 0x00}); // call Main
     textPre.insert(textPre.end(), {0x48, 0x83, 0xC4, 0x08});       // add rsp, 8 (undo sub)
     textPre.insert(textPre.end(), {0x89, 0xC7});                   // mov edi, eax
-    #if RUX_IS_BSD || RUX_IS_SUNOS
+    #if RUX_IS_BSD or RUX_IS_SUNOS
     textPre.insert(textPre.end(), {0xB8, 0x01, 0x00, 0x00, 0x00}); // mov eax, 1  (BSD/Illumos exit)
     #else
     textPre.insert(textPre.end(), {0xB8, 0x3C, 0x00, 0x00, 0x00}); // mov eax, 60 (Linux exit)
@@ -1663,7 +1663,7 @@ bool Linker::LinkElf64(std::filesystem::path const &outputPath) {
     textBuf.insert(textBuf.end(), mergedText.begin(), mergedText.end());
 
     uint16_t const phnum = static_cast<uint16_t>(2 + (!mergedData.empty() ? 1 : 0)
-    #if RUX_OS_NETBSD || RUX_OS_OPENBSD || RUX_OS_DRAGONFLY
+    #if RUX_OS_NETBSD or RUX_OS_OPENBSD or RUX_OS_DRAGONFLY
                                                  + 1 // PT_NOTE
     #endif
 
@@ -1688,10 +1688,10 @@ bool Linker::LinkElf64(std::filesystem::path const &outputPath) {
             if (sym.name.empty()) {
                 continue;
             }
-            if (sym.kind == RcuSymKind::ExternFunc || sym.kind == RcuSymKind::ExternData) {
+            if (sym.kind == RcuSymKind::ExternFunc or sym.kind == RcuSymKind::ExternData) {
                 continue;
             }
-            if (sym.visibility == RcuSymVis::Local && sym.kind != RcuSymKind::Func &&
+            if (sym.visibility == RcuSymVis::Local and sym.kind != RcuSymKind::Func and
                 sym.name != "Main") {
                 continue;
             }
@@ -1755,7 +1755,7 @@ bool Linker::LinkElf64(std::filesystem::path const &outputPath) {
                 }
                 auto const &sym = obj.symbols[reloc.symbolIndex];
                 uint64_t targetVA = 0;
-                if (sym.kind == RcuSymKind::ExternFunc || sym.kind == RcuSymKind::ExternData) {
+                if (sym.kind == RcuSymKind::ExternFunc or sym.kind == RcuSymKind::ExternData) {
                     auto it = symMap.find(sym.name);
                     if (it == symMap.end()) {
                         Error("undefined external symbol '" + sym.name + "'");
@@ -1763,7 +1763,7 @@ bool Linker::LinkElf64(std::filesystem::path const &outputPath) {
                     }
                     targetVA = it->second;
                 }
-                else if (sym.visibility != RcuSymVis::Local && !sym.name.empty() &&
+                else if (sym.visibility != RcuSymVis::Local and !sym.name.empty() and
                          symMap.contains(sym.name)) {
                     targetVA = symMap[sym.name];
                 }
@@ -1816,27 +1816,27 @@ bool Linker::LinkElf64(std::filesystem::path const &outputPath) {
         return false;
     }
 
-    auto const writeRaw = [&](void const *d, size_t n) {
+    auto const writeRaw = [&](void const *d, size_t const n) {
         out.write(static_cast<char const *>(d), static_cast<std::streamsize>(n));
     };
-    [[maybe_unused]] auto const wU8 = [&](uint8_t v) { writeRaw(&v, 1); };
-    auto const wU16 = [&](uint16_t v) { writeRaw(&v, 2); };
-    auto const wU32 = [&](uint32_t v) { writeRaw(&v, 4); };
-    auto const wU64 = [&](uint64_t v) { writeRaw(&v, 8); };
+    [[maybe_unused]] auto const wU8 = [&](uint8_t const v) { writeRaw(&v, 1); };
+    auto const wU16 = [&](uint16_t const v) { writeRaw(&v, 2); };
+    auto const wU32 = [&](uint32_t const v) { writeRaw(&v, 4); };
+    auto const wU64 = [&](uint64_t const v) { writeRaw(&v, 8); };
     auto const wBuf = [&](Buf const &b) {
         if (!b.empty()) {
             writeRaw(b.data(), b.size());
         }
     };
-    auto const padToOffset = [&](uint64_t offset) {
+    auto const padToOffset = [&](uint64_t const offset) {
         static constexpr uint8_t zeros[4096] = {};
         while (static_cast<uint64_t>(out.tellp()) < offset) {
             uint64_t const remaining = offset - static_cast<uint64_t>(out.tellp());
-            writeRaw(zeros, static_cast<size_t>(std::min<uint64_t>(remaining, sizeof(zeros))));
+            writeRaw(zeros, std::min<uint64_t>(remaining, sizeof(zeros)));
         }
     };
-    auto const writePhdr = [&](uint32_t flags, uint64_t off, uint64_t vaddr, uint64_t fileSize,
-                               uint64_t memSize) {
+    auto const writePhdr = [&](uint32_t const flags, uint64_t const off, uint64_t const vaddr,
+                               uint64_t const fileSize, uint64_t const memSize) {
         wU32(1); // PT_LOAD
         wU32(flags);
         wU64(off);
@@ -1879,7 +1879,7 @@ bool Linker::LinkElf64(std::filesystem::path const &outputPath) {
 
     writePhdr(kPfR | kPfX, textOff, textVA, textBuf.size(), textBuf.size());
     writePhdr(kPfR, rdataOff, rdataVA, mergedRodata.size(), mergedRodata.size());
-    #if RUX_OS_NETBSD || RUX_OS_OPENBSD || RUX_OS_DRAGONFLY
+    #if RUX_OS_NETBSD or RUX_OS_OPENBSD or RUX_OS_DRAGONFLY
     // Write PT_NOTE program header pointing to the OS note at the start of
     // .rodata
     wU32(4);        // p_type: PT_NOTE
@@ -2125,7 +2125,7 @@ bool Linker::LinkMachO64(std::filesystem::path const &outputPath) {
     std::unordered_set<std::string> definedSymbols;
     for (auto const &obj : objects) {
         for (auto const &sym : obj.symbols) {
-            if (sym.kind != RcuSymKind::ExternFunc && sym.kind != RcuSymKind::ExternData &&
+            if (sym.kind != RcuSymKind::ExternFunc and sym.kind != RcuSymKind::ExternData and
                 !sym.name.empty()) {
                 definedSymbols.insert(sym.name);
             }
@@ -2140,7 +2140,7 @@ bool Linker::LinkMachO64(std::filesystem::path const &outputPath) {
                     continue;
                 }
                 auto const &sym = obj.symbols[reloc.symbolIndex];
-                if ((sym.kind == RcuSymKind::ExternFunc || sym.kind == RcuSymKind::ExternData) &&
+                if ((sym.kind == RcuSymKind::ExternFunc or sym.kind == RcuSymKind::ExternData) and
                     !definedSymbols.contains(sym.name)) {
                     if (MacCompatThunk(sym.name)) {
                         macCompatExterns.insert(sym.name);
@@ -2261,10 +2261,10 @@ bool Linker::LinkMachO64(std::filesystem::path const &outputPath) {
             if (sym.name.empty()) {
                 continue;
             }
-            if (sym.kind == RcuSymKind::ExternFunc || sym.kind == RcuSymKind::ExternData) {
+            if (sym.kind == RcuSymKind::ExternFunc or sym.kind == RcuSymKind::ExternData) {
                 continue;
             }
-            if (sym.visibility == RcuSymVis::Local && sym.kind != RcuSymKind::Func &&
+            if (sym.visibility == RcuSymVis::Local and sym.kind != RcuSymKind::Func and
                 sym.name != "Main") {
                 continue;
             }
@@ -2329,7 +2329,7 @@ bool Linker::LinkMachO64(std::filesystem::path const &outputPath) {
                 }
                 auto const &sym = obj.symbols[reloc.symbolIndex];
                 uint64_t targetVA = 0;
-                if (sym.kind == RcuSymKind::ExternFunc || sym.kind == RcuSymKind::ExternData) {
+                if (sym.kind == RcuSymKind::ExternFunc or sym.kind == RcuSymKind::ExternData) {
                     auto it = symMap.find(sym.name);
                     if (it == symMap.end()) {
                         Error("undefined external symbol '" + sym.name + "'");
@@ -2337,7 +2337,7 @@ bool Linker::LinkMachO64(std::filesystem::path const &outputPath) {
                     }
                     targetVA = it->second;
                 }
-                else if (sym.visibility != RcuSymVis::Local && !sym.name.empty() &&
+                else if (sym.visibility != RcuSymVis::Local and !sym.name.empty() and
                          symMap.contains(sym.name)) {
                     targetVA = symMap[sym.name];
                 }

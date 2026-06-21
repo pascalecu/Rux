@@ -13,10 +13,11 @@ struct ABIInfo {
     std::size_t stack_alignment{0};
 };
 
-[[nodiscard]] constexpr ABIInfo GetABIInfo(OS os, Arch arch, DataModel model) noexcept {
+[[nodiscard]] constexpr ABIInfo GetABIInfo(OS const os, Arch const arch,
+                                           DataModel const model) noexcept {
     // x86_64
     if (arch == Arch::X86_64) {
-        if (os == OS::Windows && model == DataModel::LLP64) {
+        if (os == OS::Windows and model == DataModel::LLP64) {
             return {ABI::WindowsX64, CallingConv::Win64, true, 16};
         }
         if (model == DataModel::LP64) { // Linux, MacOS, BSDs

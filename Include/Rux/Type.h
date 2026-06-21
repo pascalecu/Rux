@@ -255,7 +255,7 @@ struct TypeRef {
     }
 
     [[nodiscard]] bool IsBool() const noexcept {
-        return kind == Kind::Bool8 || kind == Kind::Bool16 || kind == Kind::Bool32;
+        return kind == Kind::Bool8 or kind == Kind::Bool16 or kind == Kind::Bool32;
     }
 
     [[nodiscard]] bool IsNumeric() const noexcept;

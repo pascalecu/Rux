@@ -3,7 +3,7 @@
 
 #include "Rux/Token.h"
 
-#include <unordered_map>  // for unordered_map, operator==
+#include <unordered_map> // for unordered_map, operator==
 
 namespace Rux {
 TokenKind KeywordKind(std::string_view const text) noexcept {
@@ -258,20 +258,20 @@ std::string_view TokenKindName(TokenKind const kind) noexcept {
 }
 
 bool Token::IsKeyword() const noexcept {
-    return kind >= TokenKind::IfKeyword && kind <= TokenKind::SuperKeyword;
+    return kind >= TokenKind::IfKeyword and kind <= TokenKind::SuperKeyword;
 }
 
 bool Token::IsLiteral() const noexcept {
-    return kind >= TokenKind::IntLiteral && kind <= TokenKind::BoolLiteral;
+    return kind >= TokenKind::IntLiteral and kind <= TokenKind::BoolLiteral;
 }
 
 bool Token::IsOperator() const noexcept {
-    return kind >= TokenKind::Plus && kind <= TokenKind::GreaterGreaterAssign;
+    return kind >= TokenKind::Plus and kind <= TokenKind::GreaterGreaterAssign;
 }
 
 std::string Token::Describe() const {
     std::string d(TokenKindName(kind));
-    if (kind == TokenKind::Ident || IsLiteral()) {
+    if (kind == TokenKind::Ident or IsLiteral()) {
         d += " `" + text + "`";
     }
     return d;

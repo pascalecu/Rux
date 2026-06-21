@@ -120,7 +120,7 @@ bool Parser::IsGenericStructInitAhead() const noexcept {
     int angleDepth = 0;
     for (std::size_t ahead = 0;; ++ahead) {
         TokenKind const kind = Peek(ahead).kind;
-        if (kind == TokenKind::EndOfFile || kind == TokenKind::LeftBrace ||
+        if (kind == TokenKind::EndOfFile or kind == TokenKind::LeftBrace or
             kind == TokenKind::Semicolon) {
             return false;
         }
@@ -205,16 +205,16 @@ void Parser::Synchronize() {
             return;
         }
 
-        if (k == TokenKind::FuncKeyword || k == TokenKind::StructKeyword ||
-            k == TokenKind::EnumKeyword || k == TokenKind::UnionKeyword ||
-            k == TokenKind::InterfaceKeyword || k == TokenKind::ExtendKeyword ||
-            k == TokenKind::ModuleKeyword || k == TokenKind::ImportKeyword ||
-            k == TokenKind::ConstKeyword || k == TokenKind::TypeKeyword ||
-            k == TokenKind::ExternKeyword || k == TokenKind::PubKeyword ||
-            k == TokenKind::LetKeyword || k == TokenKind::VarKeyword || k == TokenKind::IfKeyword ||
-            k == TokenKind::WhileKeyword || k == TokenKind::DoKeyword ||
-            k == TokenKind::LoopKeyword || k == TokenKind::ForKeyword ||
-            k == TokenKind::ReturnKeyword || k == TokenKind::MatchKeyword) {
+        if (k == TokenKind::FuncKeyword or k == TokenKind::StructKeyword or
+            k == TokenKind::EnumKeyword or k == TokenKind::UnionKeyword or
+            k == TokenKind::InterfaceKeyword or k == TokenKind::ExtendKeyword or
+            k == TokenKind::ModuleKeyword or k == TokenKind::ImportKeyword or
+            k == TokenKind::ConstKeyword or k == TokenKind::TypeKeyword or
+            k == TokenKind::ExternKeyword or k == TokenKind::PubKeyword or
+            k == TokenKind::LetKeyword or k == TokenKind::VarKeyword or k == TokenKind::IfKeyword or
+            k == TokenKind::WhileKeyword or k == TokenKind::DoKeyword or
+            k == TokenKind::LoopKeyword or k == TokenKind::ForKeyword or
+            k == TokenKind::ReturnKeyword or k == TokenKind::MatchKeyword) {
             return;
         }
 
@@ -225,7 +225,7 @@ void Parser::Synchronize() {
 void Parser::Recover() {
     std::size_t const before = pos;
     Synchronize();
-    if (pos == before && !IsAtEnd()) {
+    if (pos == before and !IsAtEnd()) {
         Advance();
     }
 }
@@ -295,7 +295,7 @@ Parser::ParsedAttrs Parser::ParseAttrs() {
         if (Check(TokenKind::LeftParen)) {
             Advance(); // consume '('
 
-            if (attrName == "Call" && Check(TokenKind::Dot)) {
+            if (attrName == "Call" and Check(TokenKind::Dot)) {
                 // @[Call(.Win64)] — positional enum variant
                 Advance(); // consume '.'
                 std::string variant;
@@ -310,14 +310,14 @@ Parser::ParsedAttrs Parser::ParseAttrs() {
                                 std::format("unknown calling convention '.{}'", variant));
                 }
             }
-            else if (attrName == "Target" && Check(TokenKind::StringLiteral)) {
+            else if (attrName == "Target" and Check(TokenKind::StringLiteral)) {
                 // @[Target("Windows")] — positional OS string
                 Token const tok = Advance();
                 std::string os = DecodeStringLiteralText(tok.text);
-                if (os == "MacOS" || os == "Macos" || os == "macos") {
+                if (os == "MacOS" or os == "Macos" or os == "macos") {
                     os = "macOS";
                 }
-                if (os != "BSD" && os != "Illumos" && os != "Linux" && os != "macOS" &&
+                if (os != "BSD" and os != "Illumos" and os != "Linux" and os != "macOS" and
                     os != "Windows") {
                     EmitError(tok.location, std::format("unsupported target '{}'; valid "
                                                         "targets are: BSD, "
@@ -328,19 +328,19 @@ Parser::ParsedAttrs Parser::ParseAttrs() {
                     attrs.targetOs = std::move(os);
                 }
             }
-            else if (attrName == "Warn" && Check(TokenKind::StringLiteral)) {
+            else if (attrName == "Warn" and Check(TokenKind::StringLiteral)) {
                 // @[Warn("message")] — emit a compiler warning at each call
                 // site
                 attrs.warnMessage = DecodeStringLiteralText(Advance().text);
             }
-            else if (attrName == "Error" && Check(TokenKind::StringLiteral)) {
+            else if (attrName == "Error" and Check(TokenKind::StringLiteral)) {
                 // @[Error("message")] — emit a compiler error at each call
                 // site
                 attrs.errorMessage = DecodeStringLiteralText(Advance().text);
             }
             else if (attrName == "Import") {
                 // @[Import(lib: "...")] — DLL import library
-                while (!Check(TokenKind::RightParen) && !IsAtEnd()) {
+                while (!Check(TokenKind::RightParen) and !IsAtEnd()) {
                     if (!Check(TokenKind::Ident)) {
                         Advance();
                         continue;
@@ -349,7 +349,7 @@ Parser::ParsedAttrs Parser::ParseAttrs() {
                     if (!Match(TokenKind::Colon)) {
                         continue;
                     }
-                    if (key == "lib" && Check(TokenKind::StringLiteral)) {
+                    if (key == "lib" and Check(TokenKind::StringLiteral)) {
                         attrs.importLib = DecodeStringLiteralText(Advance().text);
                     }
                     else {
@@ -362,7 +362,7 @@ Parser::ParsedAttrs Parser::ParseAttrs() {
             }
             else {
                 EmitError(attrLoc, std::format("unknown attribute '{}'", attrName));
-                while (!Check(TokenKind::RightParen) && !IsAtEnd()) {
+                while (!Check(TokenKind::RightParen) and !IsAtEnd()) {
                     Advance();
                 }
             }
@@ -405,7 +405,7 @@ DeclPtr Parser::ParseDecl() {
     };
 
     // asm func
-    if (Check(TokenKind::Ident) && Peek().text == "asm" && Peek(1).Is(TokenKind::FuncKeyword)) {
+    if (Check(TokenKind::Ident) and Peek().text == "asm" and Peek(1).Is(TokenKind::FuncKeyword)) {
         Advance(); // consume 'asm'
         return withTarget(ParseFuncDecl(isPublic, true, attrs.callConv));
     }
@@ -453,7 +453,7 @@ std::vector<std::string> Parser::ParseTypeParams() {
     // <T, U, ...>
     std::vector<std::string> params;
     Expect(TokenKind::Less, "expected '<'");
-    while (!Check(TokenKind::Greater) && !IsAtEnd()) {
+    while (!Check(TokenKind::Greater) and !IsAtEnd()) {
         auto &t = Expect(TokenKind::Ident, "expected type parameter name");
         params.push_back(t.text);
         if (!Match(TokenKind::Comma)) {
@@ -468,7 +468,7 @@ std::vector<TypeExprPtr> Parser::ParseTypeArgs() {
     // <int32, T[], ...>
     std::vector<TypeExprPtr> args;
     Expect(TokenKind::Less, "expected '<'");
-    while (!Check(TokenKind::Greater) && !IsAtEnd()) {
+    while (!Check(TokenKind::Greater) and !IsAtEnd()) {
         args.push_back(ParseType());
         if (!Match(TokenKind::Comma)) {
             break;
@@ -478,11 +478,11 @@ std::vector<TypeExprPtr> Parser::ParseTypeArgs() {
     return args;
 }
 
-Param Parser::ParseParam(bool allowVariadic) {
+Param Parser::ParseParam(bool const allowVariadic) {
     Param p;
     p.location = CurrentLocation();
 
-    if (allowVariadic && Check(TokenKind::DotDotDot)) {
+    if (allowVariadic and Check(TokenKind::DotDotDot)) {
         Advance();
         p.isVariadic = true;
         p.name = "...";
@@ -500,18 +500,18 @@ Param Parser::ParseParam(bool allowVariadic) {
     p.name = Expect(TokenKind::Ident, "expected parameter name").text;
     Expect(TokenKind::Colon, "expected ':'");
     p.type = ParseType();
-    if (allowVariadic && Match(TokenKind::DotDotDot)) {
+    if (allowVariadic and Match(TokenKind::DotDotDot)) {
         p.isVariadic = true;
     }
-    if (!p.isVariadic && Match(TokenKind::Assign)) {
+    if (!p.isVariadic and Match(TokenKind::Assign)) {
         p.defaultValue = ParseExpr();
     }
     return p;
 }
 
-std::vector<Param> Parser::ParseParamList(bool allowVariadic) {
+std::vector<Param> Parser::ParseParamList(bool const allowVariadic) {
     std::vector<Param> params;
-    while (!Check(TokenKind::RightParen) && !IsAtEnd()) {
+    while (!Check(TokenKind::RightParen) and !IsAtEnd()) {
         params.push_back(ParseParam(allowVariadic));
         if (!Match(TokenKind::Comma)) {
             break;
@@ -521,8 +521,8 @@ std::vector<Param> Parser::ParseParamList(bool allowVariadic) {
 }
 
 // func
-std::unique_ptr<FuncDecl> Parser::ParseFuncDecl(bool isPublic, bool isAsm,
-                                                CallingConvention callConv) {
+std::unique_ptr<FuncDecl> Parser::ParseFuncDecl(bool const isPublic, bool const isAsm,
+                                                CallingConvention const callConv) {
     auto const loc = CurrentLocation();
     Expect(TokenKind::FuncKeyword, "expected 'func'");
 
@@ -561,7 +561,7 @@ std::unique_ptr<FuncDecl> Parser::ParseFuncDecl(bool isPublic, bool isAsm,
 }
 
 // struct
-std::unique_ptr<StructDecl> Parser::ParseStructDecl(bool isPublic) {
+std::unique_ptr<StructDecl> Parser::ParseStructDecl(bool const isPublic) {
     auto const loc = CurrentLocation();
     Expect(TokenKind::StructKeyword, "expected 'struct'");
 
@@ -575,7 +575,7 @@ std::unique_ptr<StructDecl> Parser::ParseStructDecl(bool isPublic) {
     }
 
     Expect(TokenKind::LeftBrace, "expected '{'");
-    while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+    while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
         StructDecl::Field field;
         field.location = CurrentLocation();
 
@@ -607,13 +607,13 @@ std::unique_ptr<EnumDecl> Parser::ParseEnumDecl(bool const isPublic) {
     }
 
     Expect(TokenKind::LeftBrace, "expected '{'");
-    while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+    while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
         EnumDecl::Variant variant;
         variant.location = CurrentLocation();
         variant.name = Expect(TokenKind::Ident, "expected variant name").text;
 
         if (Match(TokenKind::LeftParen)) {
-            while (!Check(TokenKind::RightParen) && !IsAtEnd()) {
+            while (!Check(TokenKind::RightParen) and !IsAtEnd()) {
                 variant.fields.push_back(ParseType());
                 if (!Match(TokenKind::Comma)) {
                     break;
@@ -622,7 +622,7 @@ std::unique_ptr<EnumDecl> Parser::ParseEnumDecl(bool const isPublic) {
             Expect(TokenKind::RightParen, "expected ')'");
         }
         else if (Match(TokenKind::LeftBrace)) {
-            while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+            while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
                 EnumDecl::Variant::NamedField field;
                 field.location = CurrentLocation();
                 field.name = Expect(TokenKind::Ident, "expected variant field name").text;
@@ -659,7 +659,7 @@ std::unique_ptr<EnumDecl> Parser::ParseEnumDecl(bool const isPublic) {
 }
 
 // union
-std::unique_ptr<UnionDecl> Parser::ParseUnionDecl(bool isPublic) {
+std::unique_ptr<UnionDecl> Parser::ParseUnionDecl(bool const isPublic) {
     auto const loc = CurrentLocation();
     Expect(TokenKind::UnionKeyword, "expected 'union'");
 
@@ -669,7 +669,7 @@ std::unique_ptr<UnionDecl> Parser::ParseUnionDecl(bool isPublic) {
     decl->name = Expect(TokenKind::Ident, "expected union name").text;
 
     Expect(TokenKind::LeftBrace, "expected '{'");
-    while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+    while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
         UnionDecl::Field field;
         field.location = CurrentLocation();
         field.name = Expect(TokenKind::Ident, "expected field name").text;
@@ -685,7 +685,7 @@ std::unique_ptr<UnionDecl> Parser::ParseUnionDecl(bool isPublic) {
 }
 
 // interface
-std::unique_ptr<InterfaceDecl> Parser::ParseInterfaceDecl(bool isPublic) {
+std::unique_ptr<InterfaceDecl> Parser::ParseInterfaceDecl(bool const isPublic) {
     auto const loc = CurrentLocation();
     Expect(TokenKind::InterfaceKeyword, "expected 'interface'");
 
@@ -695,7 +695,7 @@ std::unique_ptr<InterfaceDecl> Parser::ParseInterfaceDecl(bool isPublic) {
     decl->name = Expect(TokenKind::Ident, "expected interface name").text;
 
     Expect(TokenKind::LeftBrace, "expected '{'");
-    while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+    while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
         if (!Check(TokenKind::FuncKeyword)) {
             EmitError(CurrentLocation(), "expected 'func' in interface body");
             Recover();
@@ -733,7 +733,7 @@ std::unique_ptr<ImplDecl> Parser::ParseImplDecl() {
     }
 
     Expect(TokenKind::LeftBrace, "expected '{'");
-    while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+    while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
         bool pub = Match(TokenKind::PubKeyword);
         if (!Check(TokenKind::FuncKeyword)) {
             EmitError(CurrentLocation(), "expected 'func' in extend body");
@@ -749,7 +749,7 @@ std::unique_ptr<ImplDecl> Parser::ParseImplDecl() {
 }
 
 // module
-std::unique_ptr<ModuleDecl> Parser::ParseModuleDecl(bool isPublic) {
+std::unique_ptr<ModuleDecl> Parser::ParseModuleDecl(bool const isPublic) {
     auto const loc = CurrentLocation();
     Expect(TokenKind::ModuleKeyword, "expected 'module'");
 
@@ -761,7 +761,7 @@ std::unique_ptr<ModuleDecl> Parser::ParseModuleDecl(bool isPublic) {
 
     Expect(TokenKind::LeftBrace, "expected '{'");
     std::vector<DeclPtr> items;
-    while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+    while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
         if (auto item = ParseDecl()) {
             items.push_back(std::move(item));
         }
@@ -814,7 +814,7 @@ std::unique_ptr<UseDecl> Parser::ParseUseDecl(ParsedAttrs attrs) {
                 // import Http::{ Request, Response };
                 Advance(); // consume '{'
                 decl->kind = UseDecl::Kind::Multi;
-                while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+                while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
                     decl->names.push_back(Expect(TokenKind::Ident, "expected name").text);
                     if (!Match(TokenKind::Comma)) {
                         break;
@@ -840,7 +840,7 @@ std::unique_ptr<UseDecl> Parser::ParseUseDecl(ParsedAttrs attrs) {
 }
 
 // const
-std::unique_ptr<ConstDecl> Parser::ParseConstDecl(bool isPublic) {
+std::unique_ptr<ConstDecl> Parser::ParseConstDecl(bool const isPublic) {
     auto const loc = CurrentLocation();
     Expect(TokenKind::ConstKeyword, "expected 'const'");
 
@@ -861,7 +861,7 @@ std::unique_ptr<ConstDecl> Parser::ParseConstDecl(bool isPublic) {
 }
 
 // type alias
-std::unique_ptr<TypeAliasDecl> Parser::ParseTypeAliasDecl(bool isPublic) {
+std::unique_ptr<TypeAliasDecl> Parser::ParseTypeAliasDecl(bool const isPublic) {
     auto const loc = CurrentLocation();
     Expect(TokenKind::TypeKeyword, "expected 'type'");
 
@@ -889,10 +889,10 @@ DeclPtr Parser::ParseExternDecl(bool isPublic, ParsedAttrs attrs) {
         block->location = loc;
         block->dll = attrs.importLib;
         block->callConv = attrs.callConv;
-        while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+        while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
             if (Check(TokenKind::ExternKeyword)) {
                 EmitError(CurrentLocation(), "'extern' is not allowed inside an extern block");
-                while (!IsAtEnd() && !Check(TokenKind::Semicolon) &&
+                while (!IsAtEnd() and !Check(TokenKind::Semicolon) and
                        !Check(TokenKind::RightBrace)) {
                     Advance();
                 }
@@ -908,7 +908,7 @@ DeclPtr Parser::ParseExternDecl(bool isPublic, ParsedAttrs attrs) {
                 fd->callConv = attrs.callConv;
                 fd->name = Expect(TokenKind::Ident, "expected function name").text;
                 Expect(TokenKind::LeftParen, "expected '('");
-                while (!Check(TokenKind::RightParen) && !IsAtEnd()) {
+                while (!Check(TokenKind::RightParen) and !IsAtEnd()) {
                     if (Check(TokenKind::DotDotDot)) {
                         Advance();
                         fd->isVariadic = true;
@@ -958,7 +958,7 @@ DeclPtr Parser::ParseExternDecl(bool isPublic, ParsedAttrs attrs) {
         decl->name = Expect(TokenKind::Ident, "expected function name").text;
 
         Expect(TokenKind::LeftParen, "expected '('");
-        while (!Check(TokenKind::RightParen) && !IsAtEnd()) {
+        while (!Check(TokenKind::RightParen) and !IsAtEnd()) {
             if (Check(TokenKind::DotDotDot)) {
                 Advance();
                 decl->isVariadic = true;
@@ -1010,7 +1010,7 @@ TypeExprPtr Parser::ParseType() {
         Advance();
         auto t = std::make_unique<TupleTypeExpr>();
         t->location = loc;
-        while (!Check(TokenKind::RightParen) && !IsAtEnd()) {
+        while (!Check(TokenKind::RightParen) and !IsAtEnd()) {
             t->elements.push_back(ParseType());
             if (!Match(TokenKind::Comma)) {
                 break;
@@ -1085,7 +1085,7 @@ std::unique_ptr<Block> Parser::ParseBlock() {
     auto block = std::make_unique<Block>();
     block->location = loc;
 
-    while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+    while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
         if (auto stmt = ParseStmt()) {
             block->stmts.push_back(std::move(stmt));
         }
@@ -1101,7 +1101,7 @@ std::unique_ptr<Block> Parser::ParseBlock() {
 StmtPtr Parser::ParseStmt() {
     auto const loc = CurrentLocation();
 
-    if (Check(TokenKind::LetKeyword) || Check(TokenKind::VarKeyword)) {
+    if (Check(TokenKind::LetKeyword) or Check(TokenKind::VarKeyword)) {
         return ParseLetStmt();
     }
     if (Check(TokenKind::IfKeyword)) {
@@ -1109,10 +1109,10 @@ StmtPtr Parser::ParseStmt() {
     }
     // Optional loop label: `ident ':' loop-keyword`
     std::string loopLabel;
-    if (Check(TokenKind::Ident) && Peek(1).kind == TokenKind::Colon) {
+    if (Check(TokenKind::Ident) and Peek(1).kind == TokenKind::Colon) {
         TokenKind const ahead = Peek(2).kind;
-        if (ahead == TokenKind::WhileKeyword || ahead == TokenKind::DoKeyword ||
-            ahead == TokenKind::LoopKeyword || ahead == TokenKind::ForKeyword) {
+        if (ahead == TokenKind::WhileKeyword or ahead == TokenKind::DoKeyword or
+            ahead == TokenKind::LoopKeyword or ahead == TokenKind::ForKeyword) {
             loopLabel = Advance().text; // consume label name
             Advance();                  // consume ':'
         }
@@ -1241,7 +1241,7 @@ std::unique_ptr<IfStmt> Parser::ParseIfStmt() {
     structInitAllowed = true;
     s->thenBlock = ParseBlock();
 
-    while (Check(TokenKind::ElseKeyword) && Peek(1).Is(TokenKind::IfKeyword)) {
+    while (Check(TokenKind::ElseKeyword) and Peek(1).Is(TokenKind::IfKeyword)) {
         IfStmt::ElseIf elif;
         elif.location = CurrentLocation();
         Advance(); // consume 'else'
@@ -1324,7 +1324,7 @@ std::unique_ptr<MatchStmt> Parser::ParseMatchStmt() {
     structInitAllowed = true;
 
     Expect(TokenKind::LeftBrace, "expected '{'");
-    while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+    while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
         MatchStmt::Arm arm;
         arm.location = CurrentLocation();
         arm.pattern = ParsePattern();
@@ -1411,16 +1411,16 @@ ExprPtr Parser::ParseRange() {
         return nullptr;
     }
 
-    if (Check(TokenKind::DotDot) || Check(TokenKind::DotDotDot) || Check(TokenKind::DotDotEqual)) {
+    if (Check(TokenKind::DotDot) or Check(TokenKind::DotDotDot) or Check(TokenKind::DotDotEqual)) {
         // Leave bare `expr...` for ParseArgList to handle as a spread
         if (Peek().kind == TokenKind::DotDotDot) {
             TokenKind const next = Peek(1).kind;
-            if (next == TokenKind::RightParen || next == TokenKind::Comma) {
+            if (next == TokenKind::RightParen or next == TokenKind::Comma) {
                 return left;
             }
         }
         bool const incl =
-            Peek().kind == TokenKind::DotDotDot || Peek().kind == TokenKind::DotDotEqual;
+            Peek().kind == TokenKind::DotDotDot or Peek().kind == TokenKind::DotDotEqual;
         auto const loc = CurrentLocation();
         Advance();
         auto right = ParseTernary();
@@ -1645,7 +1645,7 @@ ExprPtr Parser::ParseMul() {
 ExprPtr Parser::ParseExp() {
     auto left = ParseUnary();
 
-    if (Check(TokenKind::Star) && Peek(1).kind == TokenKind::Star) {
+    if (Check(TokenKind::Star) and Peek(1).kind == TokenKind::Star) {
         auto const loc = CurrentLocation();
 
         Advance(); // first *
@@ -1697,7 +1697,7 @@ ExprPtr Parser::ParsePostfix() {
                 name = Expect(TokenKind::Ident, "expected field name or tuple index").text;
             }
 
-            if (Check(TokenKind::LeftParen) && !name.empty() && !std::isdigit(name[0])) {
+            if (Check(TokenKind::LeftParen) and !name.empty() and !std::isdigit(name[0])) {
                 // Method call: expr.method(args)
                 auto args = ParseArgList();
                 // Desugar to CallExpr with FieldExpr callee
@@ -1741,7 +1741,7 @@ ExprPtr Parser::ParsePostfix() {
             continue;
         }
         // Qualified initializer: Enum::Variant { field: value, ... }
-        if (structInitAllowed && Check(TokenKind::LeftBrace)) {
+        if (structInitAllowed and Check(TokenKind::LeftBrace)) {
             if (auto const *path = dynamic_cast<PathExpr const *>(left.get())) {
                 auto e = std::make_unique<StructInitExpr>();
                 e->location = loc;
@@ -1752,7 +1752,7 @@ ExprPtr Parser::ParsePostfix() {
                     e->typeName += path->segments[i];
                 }
                 Advance(); // consume '{'
-                while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+                while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
                     StructInitExpr::Field field;
                     field.location = CurrentLocation();
                     field.name = Expect(TokenKind::Ident, "expected field name").text;
@@ -1790,7 +1790,7 @@ ExprPtr Parser::ParsePostfix() {
             continue;
         }
         // Post-increment / post-decrement: expr++ or expr--
-        if (Check(TokenKind::PlusPlus) || Check(TokenKind::MinusMinus)) {
+        if (Check(TokenKind::PlusPlus) or Check(TokenKind::MinusMinus)) {
             TokenKind const op = Advance().kind;
             auto e = std::make_unique<PostfixExpr>();
             e->location = loc;
@@ -1815,7 +1815,7 @@ ExprPtr Parser::ParsePrimary() {
         structInitAllowed = true;
 
         Expect(TokenKind::LeftBrace, "expected '{'");
-        while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+        while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
             MatchExpr::Arm arm;
             arm.location = CurrentLocation();
             arm.pattern = ParsePattern();
@@ -1846,8 +1846,8 @@ ExprPtr Parser::ParsePrimary() {
     }
 
     // Literals
-    if (Check(TokenKind::IntLiteral) || Check(TokenKind::FloatLiteral) ||
-        Check(TokenKind::StringLiteral) || Check(TokenKind::CharLiteral) ||
+    if (Check(TokenKind::IntLiteral) or Check(TokenKind::FloatLiteral) or
+        Check(TokenKind::StringLiteral) or Check(TokenKind::CharLiteral) or
         Check(TokenKind::BoolLiteral)) {
         auto e = std::make_unique<LiteralExpr>();
         e->location = loc;
@@ -1868,7 +1868,7 @@ ExprPtr Parser::ParsePrimary() {
         return e;
     }
     // Compile-time size query: sizeof(T)
-    if (Check(TokenKind::Ident) && Peek().text == "sizeof") {
+    if (Check(TokenKind::Ident) and Peek().text == "sizeof") {
         Advance();
         auto e = std::make_unique<SizeOfExpr>();
         e->location = loc;
@@ -1901,7 +1901,7 @@ ExprPtr Parser::ParsePrimary() {
     if (Match(TokenKind::LeftBracket)) {
         auto e = std::make_unique<SliceExpr>();
         e->location = loc;
-        while (!Check(TokenKind::RightBracket) && !IsAtEnd()) {
+        while (!Check(TokenKind::RightBracket) and !IsAtEnd()) {
             e->elements.push_back(ParseExpr());
             if (!Match(TokenKind::Comma)) {
                 break;
@@ -1917,7 +1917,7 @@ ExprPtr Parser::ParsePrimary() {
             auto t = std::make_unique<TupleExpr>();
             t->location = loc;
             t->elements.push_back(std::move(first));
-            while (!Check(TokenKind::RightParen) && !IsAtEnd()) {
+            while (!Check(TokenKind::RightParen) and !IsAtEnd()) {
                 t->elements.push_back(ParseExpr());
                 if (!Match(TokenKind::Comma)) {
                     break;
@@ -1938,13 +1938,13 @@ ExprPtr Parser::ParsePrimary() {
         }
         // Struct initialization: Name { field: value, ... }
         // Disabled in control-flow condition contexts to avoid ambiguity.
-        if (structInitAllowed && Check(TokenKind::LeftBrace)) {
+        if (structInitAllowed and Check(TokenKind::LeftBrace)) {
             auto e = std::make_unique<StructInitExpr>();
             e->location = loc;
             e->typeName = name;
             e->typeArgs = std::move(typeArgs);
             Advance(); // consume '{'
-            while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+            while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
                 StructInitExpr::Field field;
                 field.location = CurrentLocation();
                 field.name = Expect(TokenKind::Ident, "expected field name").text;
@@ -1970,7 +1970,7 @@ ExprPtr Parser::ParsePrimary() {
 std::vector<ExprPtr> Parser::ParseArgList() {
     std::vector<ExprPtr> args;
     Expect(TokenKind::LeftParen, "expected '('");
-    while (!Check(TokenKind::RightParen) && !IsAtEnd()) {
+    while (!Check(TokenKind::RightParen) and !IsAtEnd()) {
         auto e = ParseExpr();
         if (Match(TokenKind::DotDotDot)) {
             auto const loc = e->location;
@@ -2009,9 +2009,9 @@ PatternPtr Parser::ParsePattern() {
     }
 
     // Range pattern: lo..hi or lo...hi or lo..=hi
-    if (Check(TokenKind::DotDot) || Check(TokenKind::DotDotDot) || Check(TokenKind::DotDotEqual)) {
+    if (Check(TokenKind::DotDot) or Check(TokenKind::DotDotDot) or Check(TokenKind::DotDotEqual)) {
         bool const incl =
-            Peek().kind == TokenKind::DotDotDot || Peek().kind == TokenKind::DotDotEqual;
+            Peek().kind == TokenKind::DotDotDot or Peek().kind == TokenKind::DotDotEqual;
         auto const loc = CurrentLocation();
         Advance();
         auto hi = ParsePrimaryPattern();
@@ -2030,7 +2030,7 @@ PatternPtr Parser::ParsePrimaryPattern() {
     auto const loc = CurrentLocation();
 
     // Wildcard: _
-    if (Check(TokenKind::Ident) && Peek().text == "_") {
+    if (Check(TokenKind::Ident) and Peek().text == "_") {
         Advance();
         auto p = std::make_unique<WildcardPattern>();
         p->location = loc;
@@ -2038,9 +2038,9 @@ PatternPtr Parser::ParsePrimaryPattern() {
     }
 
     // Literals
-    if (Check(TokenKind::IntLiteral) || Check(TokenKind::FloatLiteral) ||
-        Check(TokenKind::StringLiteral) || Check(TokenKind::CharLiteral) ||
-        Check(TokenKind::BoolLiteral) || Check(TokenKind::NullKeyword)) {
+    if (Check(TokenKind::IntLiteral) or Check(TokenKind::FloatLiteral) or
+        Check(TokenKind::StringLiteral) or Check(TokenKind::CharLiteral) or
+        Check(TokenKind::BoolLiteral) or Check(TokenKind::NullKeyword)) {
         auto p = std::make_unique<LiteralPattern>();
         p->location = loc;
         p->value = Advance();
@@ -2048,7 +2048,7 @@ PatternPtr Parser::ParsePrimaryPattern() {
     }
 
     // Negative literal: -42
-    if (Check(TokenKind::Minus) && Peek(1).Is(TokenKind::IntLiteral)) {
+    if (Check(TokenKind::Minus) and Peek(1).Is(TokenKind::IntLiteral)) {
         Advance(); // consume '-'
         auto p = std::make_unique<LiteralPattern>();
         p->location = loc;
@@ -2062,7 +2062,7 @@ PatternPtr Parser::ParsePrimaryPattern() {
     if (Match(TokenKind::LeftParen)) {
         auto p = std::make_unique<TuplePattern>();
         p->location = loc;
-        while (!Check(TokenKind::RightParen) && !IsAtEnd()) {
+        while (!Check(TokenKind::RightParen) and !IsAtEnd()) {
             p->elements.push_back(ParsePattern());
             if (!Match(TokenKind::Comma)) {
                 break;
@@ -2078,7 +2078,7 @@ PatternPtr Parser::ParsePrimaryPattern() {
         std::string const name = Advance().text;
 
         // Enum pattern: Event::Click(x, y)
-        if (Check(TokenKind::ColonColon) && Peek(1).Is(TokenKind::Ident)) {
+        if (Check(TokenKind::ColonColon) and Peek(1).Is(TokenKind::Ident)) {
             std::vector<std::string> path = {name};
             while (Match(TokenKind::ColonColon)) {
                 path.push_back(Expect(TokenKind::Ident, "expected variant name").text);
@@ -2087,7 +2087,7 @@ PatternPtr Parser::ParsePrimaryPattern() {
             p->location = loc;
             p->path = std::move(path);
             if (Match(TokenKind::LeftParen)) {
-                while (!Check(TokenKind::RightParen) && !IsAtEnd()) {
+                while (!Check(TokenKind::RightParen) and !IsAtEnd()) {
                     p->args.push_back(ParsePattern());
                     if (!Match(TokenKind::Comma)) {
                         break;
@@ -2096,7 +2096,7 @@ PatternPtr Parser::ParsePrimaryPattern() {
                 Expect(TokenKind::RightParen, "expected ')'");
             }
             else if (Match(TokenKind::LeftBrace)) {
-                while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+                while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
                     EnumPattern::NamedArg arg;
                     arg.location = CurrentLocation();
                     arg.name = Expect(TokenKind::Ident, "expected variant field name").text;
@@ -2125,7 +2125,7 @@ PatternPtr Parser::ParsePrimaryPattern() {
             auto p = std::make_unique<StructPattern>();
             p->location = loc;
             p->typeName = name;
-            while (!Check(TokenKind::RightBrace) && !IsAtEnd()) {
+            while (!Check(TokenKind::RightBrace) and !IsAtEnd()) {
                 StructPattern::Field f;
                 f.location = CurrentLocation();
                 f.name = Expect(TokenKind::Ident, "expected field name").text;
@@ -3123,7 +3123,7 @@ private:
                 out << " [" << enumPat->namedArgs.size() << " fields]";
             }
             out << '\n';
-            if (!enumPat->args.empty() || !enumPat->namedArgs.empty()) {
+            if (!enumPat->args.empty() or !enumPat->namedArgs.empty()) {
                 ++indent;
                 for (auto const &a : enumPat->args) {
                     if (a) {

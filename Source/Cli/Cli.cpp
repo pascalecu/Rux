@@ -49,7 +49,7 @@ Cli::Cli(int const argc, char *argv[])
 int Cli::Run() const {
     // Collect all arguments as string_views (skip argv[0])
     std::vector<std::string_view> sv;
-    sv.reserve(static_cast<std::size_t>(args.size()));
+    sv.reserve(args.size());
     for (auto *a : args.subspan(1)) {
         sv.emplace_back(a);
     }
@@ -70,15 +70,15 @@ int Cli::Run() const {
         std::string_view arg = sv[i];
 
         if (!foundCommand) {
-            if (arg == "-h" || arg == "--help") {
+            if (arg == "-h" or arg == "--help") {
                 PrintHelp();
                 return 0;
             }
-            if (arg == "-V" || arg == "--version") {
+            if (arg == "-V" or arg == "--version") {
                 PrintVersion();
                 return 0;
             }
-            if (arg == "-q" || arg == "--quiet" || arg == "-v" || arg == "--verbose") {
+            if (arg == "-q" or arg == "--quiet" or arg == "-v" or arg == "--verbose") {
                 preCommandGlobals.push_back(arg);
                 continue;
             }

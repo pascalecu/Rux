@@ -113,7 +113,7 @@ ElapsedSeconds(std::chrono::steady_clock::time_point const start,
     return std::chrono::duration<double>(end - start).count();
 }
 
-inline std::size_t CountLines(std::string_view source) {
+inline std::size_t CountLines(std::string_view const source) {
     if (source.empty()) {
         return 0;
     }
@@ -145,7 +145,7 @@ inline std::string FormatNumber(std::uintmax_t value) {
     return digits;
 }
 
-inline std::string FormatDecimal(double value, int decimals) {
+inline std::string FormatDecimal(double const value, int const decimals) {
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(decimals) << value;
     std::string text = oss.str();
@@ -154,16 +154,16 @@ inline std::string FormatDecimal(double value, int decimals) {
         return text;
     }
 
-    while (!text.empty() && text.back() == '0') {
+    while (!text.empty() and text.back() == '0') {
         text.pop_back();
     }
-    if (!text.empty() && text.back() == '.') {
+    if (!text.empty() and text.back() == '.') {
         text.pop_back();
     }
     return text;
 }
 
-inline std::string FormatCompactNumber(double value) {
+inline std::string FormatCompactNumber(double const value) {
     double const absValue = std::fabs(value);
     if (absValue >= 1'000'000.0) {
         return FormatDecimal(value / 1'000'000.0, 1) + "M";
@@ -171,10 +171,10 @@ inline std::string FormatCompactNumber(double value) {
     if (absValue >= 1'000.0) {
         return FormatDecimal(value / 1'000.0, 1) + "K";
     }
-    return FormatNumber(static_cast<std::uintmax_t>(std::llround(value)));
+    return FormatNumber(std::llround(value));
 }
 
-inline std::string FormatTokenThroughput(double tokensPerSecond) {
+inline std::string FormatTokenThroughput(double const tokensPerSecond) {
     double const absValue = std::fabs(tokensPerSecond);
     if (absValue >= 1'000'000.0) {
         return FormatDecimal(tokensPerSecond / 1'000'000.0, 1) + " M tok/s";
@@ -182,13 +182,13 @@ inline std::string FormatTokenThroughput(double tokensPerSecond) {
     if (absValue >= 1'000.0) {
         return FormatDecimal(tokensPerSecond / 1'000.0, 1) + " K tok/s";
     }
-    return FormatNumber(static_cast<std::uintmax_t>(std::llround(tokensPerSecond))) + " tok/s";
+    return FormatNumber(std::llround(tokensPerSecond)) + " tok/s";
 }
 
-inline std::string FormatSize(std::uintmax_t bytes) {
+inline std::string FormatSize(std::uintmax_t const bytes) {
     double const kb = static_cast<double>(bytes) / 1024.0;
     if (kb < 1024.0) {
-        return FormatNumber(static_cast<std::uintmax_t>(std::llround(kb))) + " KB";
+        return FormatNumber(std::llround(kb)) + " KB";
     }
 
     double const mb = kb / 1024.0;
@@ -205,8 +205,9 @@ inline std::string TargetName() {
 
 inline std::string HostTargetTriple() {
     auto triple = std::format("{}-{}", ToString(HostOS), ToString(HostArch));
-    std::transform(std::begin(triple), std::end(triple), std::begin(triple),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    std::ranges::transform(triple, std::begin(triple), [](unsigned char const c) {
+        return static_cast<char>(std::tolower(c));
+    });
     return triple;
 }
 
@@ -235,7 +236,7 @@ inline std::string_view TargetOsName(std::string_view const target) {
     if (os_prefix == "macos") {
         return "macOS";
     }
-    if (os_prefix == "freebsd" || os_prefix == "openbsd" || os_prefix == "netbsd" ||
+    if (os_prefix == "freebsd" or os_prefix == "openbsd" or os_prefix == "netbsd" or
         os_prefix == "dragonfly") {
         return "BSD";
     }
@@ -269,7 +270,7 @@ inline bool DeclMatchesTarget(Decl const &decl, std::string_view const target) {
 // and the name does not match the current build target it is a platform-
 // specific import that should have been pruned; skip it gracefully.
 inline bool IsPlatformPackageName(std::string_view const name) {
-    return name == "Windows" || name == "Linux" || name == "macOS" || name == "BSD" ||
+    return name == "Windows" or name == "Linux" or name == "macOS" or name == "BSD" or
            name == "Illumos";
 }
 
@@ -291,7 +292,7 @@ inline void PruneDeclForTarget(Decl &decl, std::string_view const target) {
 
 inline void PruneDeclsForTarget(std::vector<DeclPtr> &decls, std::string_view const target) {
     std::erase_if(decls,
-                  [&](DeclPtr const &decl) { return !decl || !DeclMatchesTarget(*decl, target); });
+                  [&](DeclPtr const &decl) { return !decl or !DeclMatchesTarget(*decl, target); });
     for (auto const &decl : decls) {
         PruneDeclForTarget(*decl, target);
     }
@@ -377,8 +378,8 @@ inline void PrintBuildStats(std::filesystem::path const &exePath, std::string_vi
                FormatSize(totalSourceSize), FormatSize(stats.localSourceSize),
                FormatSize(stats.dependencySourceSize), exePath.filename().string(),
                FormatSize(stats.executableSize), FormatSize(stats.peakMemoryBytes),
-               FormatNumber(static_cast<std::uintmax_t>(std::llround(compileSpeed))),
-               FormatTokenThroughput(tokenThroughput), FormatDecimal(throughput, 2));
+               FormatNumber(std::llround(compileSpeed)), FormatTokenThroughput(tokenThroughput),
+               FormatDecimal(throughput, 2));
 }
 
 inline void PrintBuildSummary(std::filesystem::path const &exePath, std::string_view profileName,
@@ -499,12 +500,12 @@ inline std::optional<std::string> RunCommandCapture(std::string const &command) 
     std::string output;
     std::array<char, 4096> buffer{};
 
-    while (::fgets(buffer.data(), static_cast<int>(buffer.size()), pipe)) {
+    while (::fgets(buffer.data(), buffer.size(), pipe)) {
         output.append(buffer.data());
     }
 
     int const status = ::pclose(pipe);
-    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+    if (!WIFEXITED(status) or WEXITSTATUS(status) != 0) {
         return std::nullopt;
     }
     return output;
@@ -526,11 +527,11 @@ inline GlobalOptions Cli::ParseGlobalOptions(std::span<std::string_view const> a
     GlobalOptions opts;
     for (std::size_t i = 0; i < args.size(); ++i) {
         std::string_view arg = args[i];
-        if (arg == "-q" || arg == "--quiet") {
+        if (arg == "-q" or arg == "--quiet") {
             opts.quiet = true;
             continue;
         }
-        if (arg == "-v" || arg == "--verbose") {
+        if (arg == "-v" or arg == "--verbose") {
             opts.verbose = true;
             continue;
         }
@@ -569,20 +570,20 @@ inline std::string JsonLookupString(std::string_view json, std::string_view key)
     std::size_t pos = 0;
     while ((pos = json.find(needle, pos)) != std::string_view::npos) {
         std::size_t i = pos + needle.size();
-        while (i < json.size() &&
-               (json[i] == ' ' || json[i] == '\t' || json[i] == '\r' || json[i] == '\n')) {
+        while (i < json.size() and
+               (json[i] == ' ' or json[i] == '\t' or json[i] == '\r' or json[i] == '\n')) {
             ++i;
         }
-        if (i >= json.size() || json[i] != ':') {
+        if (i >= json.size() or json[i] != ':') {
             pos = i;
             continue;
         }
         ++i;
-        while (i < json.size() &&
-               (json[i] == ' ' || json[i] == '\t' || json[i] == '\r' || json[i] == '\n')) {
+        while (i < json.size() and
+               (json[i] == ' ' or json[i] == '\t' or json[i] == '\r' or json[i] == '\n')) {
             ++i;
         }
-        if (i >= json.size() || json[i] != '"') {
+        if (i >= json.size() or json[i] != '"') {
             pos = i;
             continue;
         }
@@ -611,7 +612,7 @@ inline std::filesystem::path ResolveBuildOutputDir(std::filesystem::path const &
 
 // Clone a git repository into dest. Returns true on success.
 inline bool GitClone(std::string const &repoUrl, std::filesystem::path const &dest,
-                     bool devBranch) {
+                     bool const devBranch) {
 #if RUX_OS_WINDOWS
     std::wstring cmd{};
     if (!devBranch) {

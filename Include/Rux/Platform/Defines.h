@@ -51,36 +51,36 @@
     #define RUX_OS_ILLUMOS 0
 #endif
 
-#if defined(__sun) && defined(__SVR4) && !defined(__illumos__)
+#if defined(__sun) and defined(__SVR4) and !defined(__illumos__)
     #define RUX_OS_SOLARIS 1
 #else
     #define RUX_OS_SOLARIS 0
 #endif
 
-#define RUX_IS_BSD (RUX_OS_FREEBSD || RUX_OS_OPENBSD || RUX_OS_NETBSD || RUX_OS_DRAGONFLY)
-#define RUX_IS_UNIX (RUX_OS_LINUX || RUX_OS_MACOS || RUX_IS_BSD || RUX_OS_SOLARIS || RUX_OS_ILLUMOS)
-#define RUX_IS_SUNOS (RUX_OS_SOLARIS || RUX_OS_ILLUMOS)
-#define RUX_IS_ELF_OS (RUX_OS_LINUX || RUX_IS_BSD || RUX_OS_ILLUMOS || RUX_OS_SOLARIS)
+#define RUX_IS_BSD (RUX_OS_FREEBSD or RUX_OS_OPENBSD or RUX_OS_NETBSD or RUX_OS_DRAGONFLY)
+#define RUX_IS_UNIX (RUX_OS_LINUX or RUX_OS_MACOS or RUX_IS_BSD or RUX_OS_SOLARIS or RUX_OS_ILLUMOS)
+#define RUX_IS_SUNOS (RUX_OS_SOLARIS or RUX_OS_ILLUMOS)
+#define RUX_IS_ELF_OS (RUX_OS_LINUX or RUX_IS_BSD or RUX_OS_ILLUMOS or RUX_OS_SOLARIS)
 
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) or defined(_M_X64)
     #define RUX_ARCH_X64 1
 #else
     #define RUX_ARCH_X64 0
 #endif
 
-#if defined(__i386__) || defined(_M_IX86)
+#if defined(__i386__) or defined(_M_IX86)
     #define RUX_ARCH_X86 1
 #else
     #define RUX_ARCH_X86 0
 #endif
 
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__aarch64__) or defined(_M_ARM64)
     #define RUX_ARCH_ARM64 1
 #else
     #define RUX_ARCH_ARM64 0
 #endif
 
-#if defined(__arm__) || defined(_M_ARM)
+#if defined(__arm__) or defined(_M_ARM)
     #define RUX_ARCH_ARM32 1
 #else
     #define RUX_ARCH_ARM32 0
@@ -134,7 +134,7 @@
     #define RUX_BUILD_DEBUG 1
 #endif
 
-#if defined(__SSE2__) || defined(_M_X64)
+#if defined(__SSE2__) or defined(_M_X64)
     #define RUX_FEATURE_SSE2 1
 #else
     #define RUX_FEATURE_SSE2 0

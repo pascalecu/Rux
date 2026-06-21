@@ -54,7 +54,7 @@ int Cli::RunAdd(std::span<std::string_view const> args, GlobalOptions const &opt
     std::string_view pathArg;
     for (std::size_t i = 0; i < args.size(); ++i) {
         std::string_view arg = args[i];
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("add");
             return 0;
         }
@@ -66,7 +66,7 @@ int Cli::RunAdd(std::span<std::string_view const> args, GlobalOptions const &opt
             pathArg = args[++i];
             continue;
         }
-        if (!arg.starts_with('-') && spec.empty()) {
+        if (!arg.starts_with('-') and spec.empty()) {
             spec = arg;
             continue;
         }
@@ -140,11 +140,11 @@ int Cli::RunAdd(std::span<std::string_view const> args, GlobalOptions const &opt
 int Cli::RunRemove(std::span<std::string_view const> args, GlobalOptions const &opts) {
     std::string_view name;
     for (auto arg : args) {
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("remove");
             return 0;
         }
-        if (!arg.starts_with('-') && name.empty()) {
+        if (!arg.starts_with('-') and name.empty()) {
             name = arg;
             continue;
         }
@@ -186,7 +186,7 @@ int Cli::RunTest(std::span<std::string_view const> args, GlobalOptions const &op
             isRelease = true;
             continue;
         }
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("test");
             return 0;
         }
@@ -248,7 +248,7 @@ int Cli::RunTest(std::span<std::string_view const> args, GlobalOptions const &op
             }
             // Only run binary packages (not DLLs / shared libraries).
             auto const &type = pkgManifest->package.type;
-            if (type != "bin" && type != "Bin") {
+            if (type != "bin" and type != "Bin") {
                 continue;
             }
             testPackages.push_back(entry.path());
@@ -393,7 +393,7 @@ int Cli::RunTest(std::span<std::string_view const> args, GlobalOptions const &op
 
     // Summary line.
     int const total = passed + failed;
-    if (!opts.quiet || failed > 0) {
+    if (!opts.quiet or failed > 0) {
         std::print("{}: {} passed, {} failed, {} total\n", failed == 0 ? "ok" : "FAILED", passed,
                    failed, total);
     }
@@ -412,14 +412,14 @@ int Cli::RunInit(std::span<std::string_view const> args, GlobalOptions const &op
             lib = true;
             continue;
         }
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("init");
             return 0;
         }
         PrintUnknownOption(arg, "init");
         return 1;
     }
-    auto const type = (lib && !bin) ? PackageType::SharedLibrary : PackageType::Executable;
+    auto const type = (lib and !bin) ? PackageType::SharedLibrary : PackageType::Executable;
     auto const root = std::filesystem::current_path();
     auto name = root.filename().string();
     if (!opts.quiet) {

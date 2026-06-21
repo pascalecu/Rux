@@ -34,7 +34,7 @@
     #include <unistd.h>
 #endif
 
-#if RUX_ARCH_X86 || RUX_ARCH_X64
+#if RUX_ARCH_X86 or RUX_ARCH_X64
     #if RUX_COMPILER_MSVC
         #include <intrin.h>
     #else
@@ -47,7 +47,7 @@ namespace Rux::Platform {
 
 namespace {
 
-#if RUX_ARCH_X86 || RUX_ARCH_X64
+#if RUX_ARCH_X86 or RUX_ARCH_X64
 
 [[nodiscard]] inline bool HasOSXSAVE() noexcept {
     int r[4]{};
@@ -76,7 +76,7 @@ namespace {
 [[nodiscard]] CpuFeatures DetectCpuFeaturesImpl() noexcept {
     CpuFeatures f = CpuFeature::None;
 
-#if RUX_ARCH_X86 || RUX_ARCH_X64
+#if RUX_ARCH_X86 or RUX_ARCH_X64
 
     int r[4]{};
 
@@ -105,7 +105,7 @@ namespace {
     // AVX requires OS support
     bool const avx_hw = r[2] & (1 << 28);
 
-    if (avx_hw && HasOSXSAVE()) {
+    if (avx_hw and HasOSXSAVE()) {
         uint64_t xcr0 = XGetBV0();
         if ((xcr0 & 0x6) == 0x6) {
             f |= CpuFeature::AVX;
@@ -128,7 +128,7 @@ namespace {
         f |= CpuFeature::AVX512;
     }
 
-#elif RUX_ARCH_ARM64 || RUX_ARCH_ARM32
+#elif RUX_ARCH_ARM64 or RUX_ARCH_ARM32
 
     #if RUX_OS_LINUX
     unsigned long hw = getauxval(AT_HWCAP);
@@ -144,7 +144,7 @@ namespace {
     f = HostCpuFeatures;
     #endif
 
-#elif RUX_ARCH_RISCV64 || RUX_ARCH_RISCV32
+#elif RUX_ARCH_RISCV64 or RUX_ARCH_RISCV32
 
     #if RUX_OS_LINUX
     unsigned long hw = getauxval(AT_HWCAP);
@@ -176,7 +176,7 @@ namespace {
 
     std::vector<uint8_t> buffer(len);
 
-    if (len > 0 &&
+    if (len > 0 and
         GetLogicalProcessorInformation(
             reinterpret_cast<SYSTEM_LOGICAL_PROCESSOR_INFORMATION *>(buffer.data()), &len)) {
         auto *entries = reinterpret_cast<SYSTEM_LOGICAL_PROCESSOR_INFORMATION *>(buffer.data());
@@ -190,7 +190,7 @@ namespace {
                 ++info.physical_cores;
             }
 
-            else if (e.Relationship == RelationCache && e.Cache.Level == 1 &&
+            else if (e.Relationship == RelationCache and e.Cache.Level == 1 and
                      e.Cache.Type == CacheData) {
                 info.cache_line_size = e.Cache.LineSize;
             }
@@ -210,7 +210,7 @@ namespace {
 
     info.physical_cores = info.logical_cores;
 
-#elif RUX_OS_MACOS || (RUX_IS_BSD && !RUX_OS_OPENBSD)
+#elif RUX_OS_MACOS or (RUX_IS_BSD and !RUX_OS_OPENBSD)
 
     size_t s = sizeof(info.physical_cores);
     sysctlbyname("hw.physicalcpu", &info.physical_cores, &s, nullptr, 0);
@@ -282,7 +282,7 @@ MemoryInfo GetRuntimeMemoryInfo() noexcept {
         long pages = sysconf(_SC_PHYS_PAGES);
         long avpages = sysconf(_SC_AVPHYS_PAGES);
         long psize = sysconf(_SC_PAGESIZE);
-        if (pages > 0 && psize > 0) {
+        if (pages > 0 and psize > 0) {
             info.total_bytes = uint64_t(pages) * uint64_t(psize);
             info.available_bytes = uint64_t(avpages > 0 ? avpages : pages) * uint64_t(psize);
         }
@@ -326,7 +326,7 @@ MemoryInfo GetRuntimeMemoryInfo() noexcept {
     return info;
 }
 
-bool HostSupports(CpuFeatures f) noexcept {
+bool HostSupports(CpuFeatures const f) noexcept {
     return CachedCpuInfo().features.Has(f);
 }
 

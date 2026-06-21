@@ -39,9 +39,9 @@ private:
     bool isDll = false;
 
     void Error(std::string msg);
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) ||                          \
-    defined(__DragonFly__) || defined(__NetBSD__) || defined(__illumos__) ||                       \
-    (defined(__sun) && defined(__SVR4))
+#if defined(__linux__) or defined(__FreeBSD__) or defined(__OpenBSD__) or                          \
+    defined(__DragonFly__) or defined(__NetBSD__) or defined(__illumos__) or                       \
+    (defined(__sun) and defined(__SVR4))
     [[nodiscard]] bool LinkElf64(std::filesystem::path const &outputPath);
 #elif defined(__APPLE__)
     [[nodiscard]] bool LinkMachO64(std::filesystem::path const &outputPath);

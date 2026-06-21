@@ -47,7 +47,7 @@ std::optional<SourceFile> SourceLoader::LoadFile(std::filesystem::path const &pa
 
     std::ostringstream buf;
     buf << stream.rdbuf();
-    if (!stream && !stream.eof()) {
+    if (!stream and !stream.eof()) {
         return std::nullopt;
     }
 

@@ -58,10 +58,10 @@ public:
 
     void Define(HirSymbol sym) {
         if (auto it = table.find(sym.name); it != table.end()) {
-            if (it->second.kind == HirSymbol::Kind::Func && sym.kind == HirSymbol::Kind::Func) {
+            if (it->second.kind == HirSymbol::Kind::Func and sym.kind == HirSymbol::Kind::Func) {
                 it->second.funcOverloads.insert(it->second.funcOverloads.end(),
                                                 sym.funcOverloads.begin(), sym.funcOverloads.end());
-                if (it->second.type.IsUnknown() && !sym.type.IsUnknown()) {
+                if (it->second.type.IsUnknown() and !sym.type.IsUnknown()) {
                     it->second.type = std::move(sym.type);
                 }
             }
@@ -91,7 +91,7 @@ private:
 };
 
 // Operator → string
-static std::string_view OpStr(TokenKind op) {
+static std::string_view OpStr(TokenKind const op) {
     using TK = TokenKind;
     switch (op) {
     case TK::Plus:
@@ -217,7 +217,7 @@ private:
     }
 
     void PopScope() {
-        assert(currentScope->Parent() != nullptr && "cannot pop global scope");
+        assert(currentScope->Parent() != nullptr and "cannot pop global scope");
         currentScope = currentScope->Parent();
         if (constIntegerScopes.size() > 1) {
             constIntegerScopes.pop_back();
@@ -394,7 +394,7 @@ private:
     std::pair<EnumDecl const *, EnumDecl::Variant const *>
     LookupEnumVariantInitializer(std::string const &typeName) const {
         std::size_t const sep = typeName.find("::");
-        if (sep == std::string::npos || typeName.find("::", sep + 2) != std::string::npos) {
+        if (sep == std::string::npos or typeName.find("::", sep + 2) != std::string::npos) {
             return {nullptr, nullptr};
         }
 
@@ -437,7 +437,7 @@ private:
         if (str == "opaque") {
             return TypeRef::MakeOpaque();
         }
-        if (str == "bool8" || str == "bool") {
+        if (str == "bool8" or str == "bool") {
             return TypeRef::MakeBool8();
         }
         if (str == "bool16") {
@@ -452,7 +452,7 @@ private:
         if (str == "char16") {
             return TypeRef::MakeChar16();
         }
-        if (str == "char32" || str == "char") {
+        if (str == "char32" or str == "char") {
             return TypeRef::MakeChar32();
         }
         if (str == "String") {
@@ -491,7 +491,7 @@ private:
         if (str == "float32") {
             return TypeRef::MakeFloat32();
         }
-        if (str == "float64" || str == "float") {
+        if (str == "float64" or str == "float") {
             return TypeRef::MakeFloat64();
         }
 
@@ -499,23 +499,23 @@ private:
             return TypeRef::MakePointer(ParseTypeRefFromString(str.substr(1)));
         }
 
-        if (str.size() >= 2 && str.compare(str.size() - 2, 2, "[]") == 0) {
+        if (str.size() >= 2 and str.compare(str.size() - 2, 2, "[]") == 0) {
             return TypeRef::MakeSlice(ParseTypeRefFromString(str.substr(0, str.size() - 2)));
         }
 
-        if (str[0] == '(' && str.back() == ')') {
+        if (str[0] == '(' and str.back() == ')') {
             std::vector<TypeRef> elems;
             std::string content = str.substr(1, str.size() - 2);
             std::size_t start = 0;
             int depth = 0;
             for (std::size_t i = 0; i < content.size(); ++i) {
-                if (content[i] == '<' || content[i] == '(') {
+                if (content[i] == '<' or content[i] == '(') {
                     depth++;
                 }
-                else if (content[i] == '>' || content[i] == ')') {
+                else if (content[i] == '>' or content[i] == ')') {
                     depth--;
                 }
-                else if (content[i] == ',' && depth == 0) {
+                else if (content[i] == ',' and depth == 0) {
                     elems.push_back(ParseTypeRefFromString(content.substr(start, i - start)));
                     start = i + 1;
                 }
@@ -526,7 +526,7 @@ private:
             return TypeRef::MakeTuple(elems);
         }
 
-        if (str.rfind("Range<", 0) == 0 && str.back() == '>') {
+        if (str.rfind("Range<", 0) == 0 and str.back() == '>') {
             return TypeRef::MakeRange(ParseTypeRefFromString(str.substr(6, str.size() - 7)));
         }
 
@@ -536,20 +536,20 @@ private:
     static std::vector<TypeRef> ParseTypeArgsFromTypeName(std::string const &typeName) {
         std::vector<TypeRef> args;
         std::size_t const pos = typeName.find('<');
-        if (pos == std::string::npos || typeName.back() != '>') {
+        if (pos == std::string::npos or typeName.back() != '>') {
             return args;
         }
         std::string content = typeName.substr(pos + 1, typeName.size() - pos - 2);
         std::size_t start = 0;
         int depth = 0;
         for (std::size_t i = 0; i < content.size(); ++i) {
-            if (content[i] == '<' || content[i] == '(') {
+            if (content[i] == '<' or content[i] == '(') {
                 depth++;
             }
-            else if (content[i] == '>' || content[i] == ')') {
+            else if (content[i] == '>' or content[i] == ')') {
                 depth--;
             }
-            else if (content[i] == ',' && depth == 0) {
+            else if (content[i] == ',' and depth == 0) {
                 args.push_back(ParseTypeRefFromString(content.substr(start, i - start)));
                 start = i + 1;
             }
@@ -595,7 +595,8 @@ private:
         static constexpr std::string_view suffixes[] = {"i8",  "i16", "i32", "i64", "u8", "u16",
                                                         "u32", "u64", "f32", "f64", "i",  "u"};
         for (auto suffix : suffixes) {
-            if (text.size() > suffix.size() && text.substr(text.size() - suffix.size()) == suffix) {
+            if (text.size() > suffix.size() and
+                text.substr(text.size() - suffix.size()) == suffix) {
                 return std::string(suffix);
             }
         }
@@ -611,7 +612,7 @@ private:
     }
 
     static std::optional<std::uint64_t> ParseUnsuffixedIntegerLiteral(Token const &tok) {
-        if (tok.kind != TokenKind::IntLiteral || !NumericLiteralSuffix(tok.text).empty()) {
+        if (tok.kind != TokenKind::IntLiteral or !NumericLiteralSuffix(tok.text).empty()) {
             return std::nullopt;
         }
 
@@ -625,7 +626,7 @@ private:
 
         int base = 10;
         std::string_view digits(text);
-        if (digits.size() > 2 && digits[0] == '0') {
+        if (digits.size() > 2 and digits[0] == '0') {
             switch (digits[1]) {
             case 'x':
             case 'X':
@@ -654,7 +655,7 @@ private:
         auto const *first = digits.data();
         auto const *last = first + digits.size();
         auto const [ptr, ec] = std::from_chars(first, last, value, base);
-        if (ec != std::errc{} || ptr != last) {
+        if (ec != std::errc{} or ptr != last) {
             return std::nullopt;
         }
         return value;
@@ -663,13 +664,13 @@ private:
     static std::optional<std::uint64_t> ParseUnsignedIntegerText(std::string const &rawText) {
         std::string text = StripNumericLiteralSuffix(rawText);
         text.erase(std::remove(text.begin(), text.end(), '_'), text.end());
-        if (text.empty() || text[0] == '-') {
+        if (text.empty() or text[0] == '-') {
             return std::nullopt;
         }
 
         int base = 10;
         std::string_view digits(text);
-        if (digits.size() > 2 && digits[0] == '0') {
+        if (digits.size() > 2 and digits[0] == '0') {
             switch (digits[1]) {
             case 'x':
             case 'X':
@@ -698,7 +699,7 @@ private:
         auto const *first = digits.data();
         auto const *last = first + digits.size();
         auto const [ptr, ec] = std::from_chars(first, last, value, base);
-        if (ec != std::errc{} || ptr != last) {
+        if (ec != std::errc{} or ptr != last) {
             return std::nullopt;
         }
         return value;
@@ -725,7 +726,7 @@ private:
 
     static std::optional<std::int64_t> ParseEnumDiscriminant(std::string const &text) {
         std::string cleaned = StripNumericLiteralSuffix(text);
-        bool const negative = !cleaned.empty() && cleaned[0] == '-';
+        bool const negative = !cleaned.empty() and cleaned[0] == '-';
         if (negative) {
             cleaned.erase(cleaned.begin());
         }
@@ -740,7 +741,7 @@ private:
 
         int base = 10;
         std::string_view digits(digitsText);
-        if (digits.size() > 2 && digits[0] == '0') {
+        if (digits.size() > 2 and digits[0] == '0') {
             switch (digits[1]) {
             case 'x':
             case 'X':
@@ -769,7 +770,7 @@ private:
         auto const *first = digits.data();
         auto const *last = first + digits.size();
         auto const [ptr, ec] = std::from_chars(first, last, parsed, base);
-        if (ec != std::errc{} || ptr != last) {
+        if (ec != std::errc{} or ptr != last) {
             return std::nullopt;
         }
         if (negative) {
@@ -831,7 +832,7 @@ private:
         LiteralExpr const *literal = dynamic_cast<LiteralExpr const *>(&expr);
         if (!literal) {
             if (auto const *unary = dynamic_cast<UnaryExpr const *>(&expr);
-                unary && unary->op == TokenKind::Minus) {
+                unary and unary->op == TokenKind::Minus) {
                 literal = dynamic_cast<LiteralExpr const *>(unary->operand.get());
             }
             if (!literal) {
@@ -865,12 +866,12 @@ private:
 
     static bool IsNullLiteral(Expr const &expr) {
         auto const *literal = dynamic_cast<LiteralExpr const *>(&expr);
-        return literal && literal->token.kind == TokenKind::NullKeyword;
+        return literal and literal->token.kind == TokenKind::NullKeyword;
     }
 
     static std::string NamedBaseTypeName(TypeRef const &type) {
         TypeRef const *named = &type;
-        if (type.kind == TypeRef::Kind::Pointer && !type.inner.empty()) {
+        if (type.kind == TypeRef::Kind::Pointer and !type.inner.empty()) {
             named = &type.inner[0];
         }
         if (named->kind == TypeRef::Kind::Named) {
@@ -957,7 +958,7 @@ private:
         if (name == "opaque") {
             return TypeRef::MakeOpaque();
         }
-        if (name == "bool" || name == "bool8") {
+        if (name == "bool" or name == "bool8") {
             return TypeRef::MakeBool8();
         }
         if (name == "bool16") {
@@ -966,7 +967,7 @@ private:
         if (name == "bool32") {
             return TypeRef::MakeBool32();
         }
-        if (name == "char" || name == "char32") {
+        if (name == "char" or name == "char32") {
             return TypeRef::MakeChar32();
         }
         if (name == "char8") {
@@ -1018,14 +1019,14 @@ private:
     }
 
     static std::optional<TypeRef> SliceElementType(TypeRef const &type) {
-        if (type.kind == TypeRef::Kind::Slice && !type.inner.empty()) {
+        if (type.kind == TypeRef::Kind::Slice and !type.inner.empty()) {
             return type.inner[0];
         }
         if (type.kind != TypeRef::Kind::Named) {
             return std::nullopt;
         }
         constexpr std::string_view prefix = "Slice<";
-        if (!type.name.starts_with(prefix) || type.name.back() != '>') {
+        if (!type.name.starts_with(prefix) or type.name.back() != '>') {
             return std::nullopt;
         }
         std::string elemName =
@@ -1040,7 +1041,7 @@ private:
         if (auto elemType = SliceElementType(type)) {
             return elemType;
         }
-        if (type.kind == TypeRef::Kind::Pointer && !type.inner.empty()) {
+        if (type.kind == TypeRef::Kind::Pointer and !type.inner.empty()) {
             return type.inner[0];
         }
         return std::nullopt;
@@ -1056,9 +1057,9 @@ private:
                 }
             }
             HirSymbol *sym = currentScope->Lookup(t->name);
-            if (sym &&
-                (sym->kind == HirSymbol::Kind::Type || sym->kind == HirSymbol::Kind::Interface)) {
-                if (t->typeArgs.empty() && !sym->type.IsUnknown()) {
+            if (sym and
+                (sym->kind == HirSymbol::Kind::Type or sym->kind == HirSymbol::Kind::Interface)) {
+                if (t->typeArgs.empty() and !sym->type.IsUnknown()) {
                     return sym->type;
                 }
                 if (t->typeArgs.empty()) {
@@ -1094,7 +1095,7 @@ private:
 
     std::optional<std::uint64_t> FixedSliceTypeSize(TypeExpr const &expr) {
         auto const *slice = dynamic_cast<SliceTypeExpr const *>(&expr);
-        if (!slice || !slice->size) {
+        if (!slice or !slice->size) {
             return std::nullopt;
         }
         if (auto const *literal = dynamic_cast<LiteralExpr const *>(slice->size.get())) {
@@ -1187,7 +1188,7 @@ private:
         std::vector<TypeRef> params;
         params.push_back(receiverType);
         for (auto const &param : method.params) {
-            if (param.isVariadic || param.name == "self") {
+            if (param.isVariadic or param.name == "self") {
                 continue;
             }
             params.push_back(ResolveType(*param.type));
@@ -1221,18 +1222,18 @@ private:
             return false;
         }
         auto const methodIt = typeIt->second.find(methodName);
-        return methodIt != typeIt->second.end() && methodIt->second.size() > 1;
+        return methodIt != typeIt->second.end() and methodIt->second.size() > 1;
     }
 
     bool FunctionIsOverloaded(std::string const &name) const {
         auto const it = functionsByName.find(name);
-        return it != functionsByName.end() && it->second.size() > 1;
+        return it != functionsByName.end() and it->second.size() > 1;
     }
 
     static std::string MangleTypeName(TypeRef const &type) {
         std::string out;
         for (char const c : type.ToString()) {
-            if (std::isalnum(static_cast<unsigned char>(c)) || c == '_') {
+            if (std::isalnum(static_cast<unsigned char>(c)) or c == '_') {
                 out += c;
             }
             else {
@@ -1263,7 +1264,7 @@ private:
 
     FuncDecl const *LookupFunction(std::string const &name, std::vector<TypeRef> const &argTypes) {
         auto const it = functionsByName.find(name);
-        if (it == functionsByName.end() || it->second.empty()) {
+        if (it == functionsByName.end() or it->second.empty()) {
             return nullptr;
         }
         if (it->second.size() == 1) {
@@ -1272,29 +1273,29 @@ private:
             // the type-checker.
             auto const *decl = it->second[0];
             TypeRef ft = MakeFuncType(decl->params, decl->returnType, decl->typeParams);
-            if (ft.kind != TypeRef::Kind::Func || ft.inner.empty()) {
+            if (ft.kind != TypeRef::Kind::Func or ft.inner.empty()) {
                 return decl;
             }
             std::size_t const paramCount = ft.inner.size() - 1;
-            bool const isVariadic = !decl->params.empty() && decl->params.back().isVariadic;
+            bool const isVariadic = !decl->params.empty() and decl->params.back().isVariadic;
             std::size_t requiredCount = 0;
             for (auto const &p : decl->params) {
-                if (!p.isVariadic && !p.defaultValue) {
+                if (!p.isVariadic and !p.defaultValue) {
                     ++requiredCount;
                 }
             }
             bool const arityOk =
                 isVariadic ? argTypes.size() >= requiredCount
-                           : (argTypes.size() >= requiredCount && argTypes.size() <= paramCount);
+                           : (argTypes.size() >= requiredCount and argTypes.size() <= paramCount);
             if (!arityOk) {
                 return nullptr;
             }
             for (std::size_t i = 0; i < std::min(argTypes.size(), paramCount); ++i) {
-                if (argTypes[i].IsUnknown() || ft.inner[i].IsUnknown()) {
+                if (argTypes[i].IsUnknown() or ft.inner[i].IsUnknown()) {
                     continue;
                 }
-                if (!argTypes[i].IsAssignableTo(ft.inner[i]) &&
-                    !(argTypes[i].IsInteger() && ft.inner[i].IsInteger())) {
+                if (!argTypes[i].IsAssignableTo(ft.inner[i]) and
+                    !(argTypes[i].IsInteger() and ft.inner[i].IsInteger())) {
                     return nullptr;
                 }
             }
@@ -1304,22 +1305,23 @@ private:
             for (bool const exactOnly : {true, false}) {
                 for (auto const *decl : it->second) {
                     TypeRef ft = MakeFuncType(decl->params, decl->returnType, decl->typeParams);
-                    if (ft.kind != TypeRef::Kind::Func || ft.inner.empty()) {
+                    if (ft.kind != TypeRef::Kind::Func or ft.inner.empty()) {
                         continue;
                     }
                     std::size_t const paramCount = ft.inner.size() - 1;
-                    bool const isVariadic = !decl->params.empty() && decl->params.back().isVariadic;
+                    bool const isVariadic =
+                        !decl->params.empty() and decl->params.back().isVariadic;
                     if (isVariadic != allowVariadic) {
                         continue;
                     }
                     std::size_t requiredCount = 0;
                     for (auto const &p : decl->params) {
-                        if (!p.isVariadic && !p.defaultValue) {
+                        if (!p.isVariadic and !p.defaultValue) {
                             ++requiredCount;
                         }
                     }
                     bool const arityOk = isVariadic ? argTypes.size() >= requiredCount
-                                                    : (argTypes.size() >= requiredCount &&
+                                                    : (argTypes.size() >= requiredCount and
                                                        argTypes.size() <= paramCount);
                     if (!arityOk) {
                         continue;
@@ -1327,12 +1329,12 @@ private:
                     bool match = true;
                     for (std::size_t i = 0; i < std::min(argTypes.size(), paramCount); ++i) {
                         TypeRef const &paramType = ft.inner[i];
-                        if (argTypes[i].IsUnknown() || paramType.IsUnknown()) {
+                        if (argTypes[i].IsUnknown() or paramType.IsUnknown()) {
                             continue;
                         }
                         if (exactOnly ? !(argTypes[i] == paramType)
-                                      : !(argTypes[i].IsAssignableTo(paramType) ||
-                                          (argTypes[i].IsInteger() && paramType.IsInteger()))) {
+                                      : !(argTypes[i].IsAssignableTo(paramType) or
+                                          (argTypes[i].IsInteger() and paramType.IsInteger()))) {
                             match = false;
                             break;
                         }
@@ -1447,11 +1449,11 @@ private:
             }
             for (std::size_t i = 0; i < argTypes.size(); ++i) {
                 TypeRef const &paramType = ft.inner[i + 1];
-                if (argTypes[i].IsUnknown() || paramType.IsUnknown()) {
+                if (argTypes[i].IsUnknown() or paramType.IsUnknown()) {
                     continue;
                 }
-                if (!argTypes[i].IsAssignableTo(paramType) &&
-                    !(argTypes[i].IsInteger() && paramType.IsInteger())) {
+                if (!argTypes[i].IsAssignableTo(paramType) and
+                    !(argTypes[i].IsInteger() and paramType.IsInteger())) {
                     return nullptr;
                 }
             }
@@ -1467,9 +1469,9 @@ private:
             bool match = true;
             for (std::size_t i = 0; i < argTypes.size(); ++i) {
                 TypeRef const &paramType = ft.inner[i + 1];
-                if (!argTypes[i].IsUnknown() && !paramType.IsUnknown() &&
-                    !argTypes[i].IsAssignableTo(paramType) &&
-                    !(argTypes[i].IsInteger() && paramType.IsInteger())) {
+                if (!argTypes[i].IsUnknown() and !paramType.IsUnknown() and
+                    !argTypes[i].IsAssignableTo(paramType) and
+                    !(argTypes[i].IsInteger() and paramType.IsInteger())) {
                     match = false;
                     break;
                 }
@@ -1537,21 +1539,22 @@ private:
         }
         auto hasVtable = [&](TypeRef const &type) {
             auto typeIt = typeInterfaceVtables.find(type.ToString());
-            return typeIt != typeInterfaceVtables.end() && typeIt->second.contains(targetType.name);
+            return typeIt != typeInterfaceVtables.end() and
+                   typeIt->second.contains(targetType.name);
         };
         if (hasVtable(exprType)) {
             return exprType;
         }
-        if (exprType.kind == TypeRef::Kind::Int && hasVtable(TypeRef::MakeInt64())) {
+        if (exprType.kind == TypeRef::Kind::Int and hasVtable(TypeRef::MakeInt64())) {
             return TypeRef::MakeInt64();
         }
-        if (exprType.kind == TypeRef::Kind::Int64 && hasVtable(TypeRef::MakeInt())) {
+        if (exprType.kind == TypeRef::Kind::Int64 and hasVtable(TypeRef::MakeInt())) {
             return TypeRef::MakeInt();
         }
-        if (exprType.kind == TypeRef::Kind::UInt && hasVtable(TypeRef::MakeUInt64())) {
+        if (exprType.kind == TypeRef::Kind::UInt and hasVtable(TypeRef::MakeUInt64())) {
             return TypeRef::MakeUInt64();
         }
-        if (exprType.kind == TypeRef::Kind::UInt64 && hasVtable(TypeRef::MakeUInt())) {
+        if (exprType.kind == TypeRef::Kind::UInt64 and hasVtable(TypeRef::MakeUInt())) {
             return TypeRef::MakeUInt();
         }
         return std::nullopt;
@@ -1593,7 +1596,7 @@ private:
                 return std::nullopt;
             }
             auto const elemSize = SizeOfTypeRef(type.inner[0], substitutions);
-            if (!elemSize || *elemSize == 0) {
+            if (!elemSize or *elemSize == 0) {
                 return std::nullopt;
             }
             return AlignUp(2 * *elemSize + 1, *elemSize);
@@ -1674,7 +1677,7 @@ private:
         };
 
         for (auto const &variant : decl.variants) {
-            if (variant.fields.empty() && variant.namedFields.empty()) {
+            if (variant.fields.empty() and variant.namedFields.empty()) {
                 continue;
             }
 
@@ -1744,7 +1747,7 @@ private:
             if (structIt != structDecls.end()) {
                 std::unordered_map<std::string, TypeRef> fieldSubstitutions = substitutions;
                 auto const &params = structIt->second->typeParams;
-                for (std::size_t i = 0; i < params.size() && i < t->typeArgs.size(); ++i) {
+                for (std::size_t i = 0; i < params.size() and i < t->typeArgs.size(); ++i) {
                     fieldSubstitutions[params[i]] =
                         ResolveTypeWithSubstitution(*t->typeArgs[i], substitutions);
                 }
@@ -1768,13 +1771,13 @@ private:
         if ((b0 & 0x80u) == 0) {
             return b0;
         }
-        if ((b0 & 0xE0u) == 0xC0u && i + 1 < text.size()) {
+        if ((b0 & 0xE0u) == 0xC0u and i + 1 < text.size()) {
             return ((b0 & 0x1Fu) << 6) | (byte(1) & 0x3Fu);
         }
-        if ((b0 & 0xF0u) == 0xE0u && i + 2 < text.size()) {
+        if ((b0 & 0xF0u) == 0xE0u and i + 2 < text.size()) {
             return ((b0 & 0x0Fu) << 12) | ((byte(1) & 0x3Fu) << 6) | (byte(2) & 0x3Fu);
         }
-        if ((b0 & 0xF8u) == 0xF0u && i + 3 < text.size()) {
+        if ((b0 & 0xF8u) == 0xF0u and i + 3 < text.size()) {
             return ((b0 & 0x07u) << 18) | ((byte(1) & 0x3Fu) << 12) | ((byte(2) & 0x3Fu) << 6) |
                    (byte(3) & 0x3Fu);
         }
@@ -1811,28 +1814,28 @@ private:
     static std::size_t ParseUnicodeEscape(std::string const &text, std::size_t uPos,
                                           std::uint32_t &cp) {
         std::size_t j = uPos + 1;
-        if (j >= text.size() || text[j] != '{') {
+        if (j >= text.size() or text[j] != '{') {
             return uPos;
         }
         ++j;
         std::uint32_t value = 0;
         std::size_t digits = 0;
-        for (; j < text.size() && text[j] != '}'; ++j, ++digits) {
+        for (; j < text.size() and text[j] != '}'; ++j, ++digits) {
             char const h = text[j];
-            if (h >= '0' && h <= '9') {
+            if (h >= '0' and h <= '9') {
                 value = (value << 4) | static_cast<std::uint32_t>(h - '0');
             }
-            else if (h >= 'a' && h <= 'f') {
+            else if (h >= 'a' and h <= 'f') {
                 value = (value << 4) | static_cast<std::uint32_t>(h - 'a' + 10);
             }
-            else if (h >= 'A' && h <= 'F') {
+            else if (h >= 'A' and h <= 'F') {
                 value = (value << 4) | static_cast<std::uint32_t>(h - 'A' + 10);
             }
             else {
                 return uPos;
             }
         }
-        if (digits == 0 || j >= text.size() || text[j] != '}') {
+        if (digits == 0 or j >= text.size() or text[j] != '}') {
             return uPos;
         }
         cp = value;
@@ -1843,9 +1846,9 @@ private:
         // text is raw source like 'A' or '\n'; strip quotes and decode.
         std::uint32_t cp = 0;
         std::size_t const quote = text.find('\'');
-        if (quote != std::string::npos && quote + 1 < text.size()) {
+        if (quote != std::string::npos and quote + 1 < text.size()) {
             std::size_t i = quote + 1; // skip opening '
-            if (text[i] == '\\' && i + 1 < text.size()) {
+            if (text[i] == '\\' and i + 1 < text.size()) {
                 switch (text[i + 1]) {
                 case 'n':
                     cp = '\n';
@@ -2001,13 +2004,13 @@ private:
 
         std::size_t srcIdx = std::string::npos;
         for (std::size_t i = 0; i < parts.size(); ++i) {
-            if (parts[i] == "Src" || parts[i] == "src") {
+            if (parts[i] == "Src" or parts[i] == "src") {
                 srcIdx = i;
             }
         }
 
         std::vector<std::string> mod;
-        if (srcIdx != std::string::npos && srcIdx + 1 < parts.size()) {
+        if (srcIdx != std::string::npos and srcIdx + 1 < parts.size()) {
             for (std::size_t i = srcIdx + 1; i < parts.size(); ++i) {
                 std::string s = parts[i];
                 if (i + 1 == parts.size()) {
@@ -2252,7 +2255,7 @@ private:
         TypeRef savedSelfType = currentSelfType;
         inImpl = true;
         TypeRef selfBase;
-        if (HirSymbol *sym = currentScope->Lookup(d.typeName); sym && !sym->type.IsUnknown()) {
+        if (HirSymbol *sym = currentScope->Lookup(d.typeName); sym and !sym->type.IsUnknown()) {
             selfBase = sym->type;
         }
         else {
@@ -2432,7 +2435,7 @@ private:
             hs->variable = s->variable;
             hs->iterable = LowerExpr(*s->iterable);
             TypeRef elemType = TypeRef::MakeUnknown();
-            if (hs->iterable->type.IsRange() && !hs->iterable->type.inner.empty()) {
+            if (hs->iterable->type.IsRange() and !hs->iterable->type.inner.empty()) {
                 elemType = hs->iterable->type.inner[0];
             }
             else if (auto sliceElem = SliceElementType(hs->iterable->type)) {
@@ -2525,7 +2528,7 @@ private:
         if (UnsuffixedIntegerLiteralFits(expr, targetType)) {
             lowered->type = targetType;
         }
-        else if (IsNullLiteral(expr) && targetType.kind == TypeRef::Kind::Pointer) {
+        else if (IsNullLiteral(expr) and targetType.kind == TypeRef::Kind::Pointer) {
             lowered->type = targetType;
             if (auto *literal = dynamic_cast<HirLiteralExpr *>(lowered.get())) {
                 literal->value = "0";
@@ -2533,7 +2536,7 @@ private:
         }
         else if (targetType.kind == TypeRef::Kind::Named) {
             if (HirSymbol *sym = currentScope->Lookup(targetType.name);
-                sym && sym->kind == HirSymbol::Kind::Interface && lowered->type != targetType) {
+                sym and sym->kind == HirSymbol::Kind::Interface and lowered->type != targetType) {
                 std::optional<TypeRef> implementationType =
                     InterfaceImplementationType(lowered->type, targetType);
                 if (!implementationType) {
@@ -2550,7 +2553,7 @@ private:
                 // dispatch. Empty interfaces have nothing to dispatch, so
                 // no vtable is generated.
                 auto const ifaceIt = interfaceDecls.find(targetType.name);
-                if (ifaceIt != interfaceDecls.end() && !ifaceIt->second->methods.empty()) {
+                if (ifaceIt != interfaceDecls.end() and !ifaceIt->second->methods.empty()) {
                     coerce->vtableLabel = "__vtable__" + typeName + "__" + targetType.name;
                 }
                 coerce->value = std::move(lowered);
@@ -2578,7 +2581,7 @@ private:
         auto const structIt = structDecls.find(expr.typeName);
         if (structIt == structDecls.end()) {
             if (auto const [enumDecl, variant] = LookupEnumVariantInitializer(expr.typeName);
-                enumDecl && variant) {
+                enumDecl and variant) {
                 for (auto const &field : variant->namedFields) {
                     if (field.name == fieldName) {
                         return ResolveType(*field.type);
@@ -2608,7 +2611,7 @@ private:
             else if (e->token.kind == TokenKind::StringLiteral) {
                 he->value = DecodeStringLiteral(e->token.text);
             }
-            else if (e->token.kind == TokenKind::IntLiteral ||
+            else if (e->token.kind == TokenKind::IntLiteral or
                      e->token.kind == TokenKind::FloatLiteral) {
                 he->value = StripNumericLiteralSuffix(e->token.text);
             }
@@ -2635,14 +2638,14 @@ private:
         if (auto *e = dynamic_cast<PathExpr const *>(&expr)) {
             if (e->segments.size() == 2) {
                 if (HirSymbol *first = currentScope->Lookup(e->segments[0]);
-                    first && (first->kind == HirSymbol::Kind::Type ||
-                              first->kind == HirSymbol::Kind::Interface)) {
+                    first and (first->kind == HirSymbol::Kind::Type or
+                               first->kind == HirSymbol::Kind::Interface)) {
                     if (first->kind == HirSymbol::Kind::Type) {
                         if (auto const discriminant =
                                 LookupEnumVariantDiscriminant(e->segments[0], e->segments[1])) {
                             auto const *variant = LookupEnumVariant(e->segments[0], e->segments[1]);
-                            if (variant &&
-                                (!variant->fields.empty() || !variant->namedFields.empty())) {
+                            if (variant and
+                                (!variant->fields.empty() or !variant->namedFields.empty())) {
                                 auto he = std::make_unique<HirPathExpr>();
                                 he->location = e->location;
                                 he->segments = e->segments;
@@ -2809,7 +2812,7 @@ private:
                     if (UnsuffixedIntegerLiteralFits(*e->right, expectedType)) {
                         right->type = expectedType;
                     }
-                    else if (IsNullLiteral(*e->right) &&
+                    else if (IsNullLiteral(*e->right) and
                              expectedType.kind == TypeRef::Kind::Pointer) {
                         right->type = expectedType;
                         if (auto *lit = dynamic_cast<HirLiteralExpr *>(right.get())) {
@@ -2866,18 +2869,18 @@ private:
         }
         if (auto *e = dynamic_cast<CallExpr const *>(&expr)) {
             if (auto *path = dynamic_cast<PathExpr const *>(e->callee.get());
-                path && path->segments.size() == 2) {
+                path and path->segments.size() == 2) {
                 auto const *variant = LookupEnumVariant(path->segments[0], path->segments[1]);
-                if (variant && (!variant->fields.empty() || !variant->namedFields.empty())) {
+                if (variant and (!variant->fields.empty() or !variant->namedFields.empty())) {
                     TypeExpr const *singlePayloadType = nullptr;
-                    if (variant->fields.size() == 1 && variant->namedFields.empty()) {
+                    if (variant->fields.size() == 1 and variant->namedFields.empty()) {
                         singlePayloadType = variant->fields[0].get();
                     }
-                    else if (variant->fields.empty() && variant->namedFields.size() == 1) {
+                    else if (variant->fields.empty() and variant->namedFields.size() == 1) {
                         singlePayloadType = variant->namedFields[0].type.get();
                     }
 
-                    if (singlePayloadType && e->args.size() == 1) {
+                    if (singlePayloadType and e->args.size() == 1) {
                         auto he = std::make_unique<HirEnumConstructExpr>();
                         he->location = e->location;
                         he->type = EnumType(*enumDecls.at(path->segments[0]));
@@ -2899,11 +2902,11 @@ private:
             }
 
             if (auto *path = dynamic_cast<PathExpr const *>(e->callee.get());
-                path && path->segments.size() == 2) {
+                path and path->segments.size() == 2) {
                 HirSymbol *first = currentScope->Lookup(path->segments[0]);
-                if (first &&
-                    (first->kind == HirSymbol::Kind::Type ||
-                     first->kind == HirSymbol::Kind::Interface) &&
+                if (first and
+                    (first->kind == HirSymbol::Kind::Type or
+                     first->kind == HirSymbol::Kind::Interface) and
                     !LookupEnumVariant(path->segments[0], path->segments[1])) {
                     TypeRef receiverType =
                         first->type.IsUnknown() ? TypeRef::MakeNamed(first->name) : first->type;
@@ -2928,7 +2931,7 @@ private:
                         he->location = e->location;
                         he->callee = std::move(callee);
                         for (std::size_t i = 0; i < args.size(); ++i) {
-                            if (i + 1 < funcType.inner.size() &&
+                            if (i + 1 < funcType.inner.size() and
                                 UnsuffixedIntegerLiteralFits(*e->args[i], funcType.inner[i])) {
                                 args[i]->type = funcType.inner[i];
                             }
@@ -2942,7 +2945,7 @@ private:
             }
 
             if (auto *path = dynamic_cast<PathExpr const *>(e->callee.get());
-                path && path->segments.size() >= 2) {
+                path and path->segments.size() >= 2) {
                 std::vector<HirExprPtr> args;
                 std::vector<TypeRef> argTypes;
                 args.reserve(e->args.size());
@@ -2954,13 +2957,13 @@ private:
                 }
                 std::string const &funcName = path->segments.back();
                 HirSymbol *sym = currentScope->Lookup(funcName);
-                if (sym && sym->kind == HirSymbol::Kind::Func && !sym->funcOverloads.empty()) {
+                if (sym and sym->kind == HirSymbol::Kind::Func and !sym->funcOverloads.empty()) {
                     if (FuncDecl const *decl = LookupFunction(funcName, argTypes)) {
                         TypeRef funcType =
                             MakeFuncType(decl->params, decl->returnType, decl->typeParams);
-                        if (funcType.kind == TypeRef::Kind::Func && !funcType.inner.empty()) {
+                        if (funcType.kind == TypeRef::Kind::Func and !funcType.inner.empty()) {
                             bool const isVariadic =
-                                !decl->params.empty() && decl->params.back().isVariadic;
+                                !decl->params.empty() and decl->params.back().isVariadic;
                             std::size_t const fixedCount =
                                 decl->params.size() - (isVariadic ? 1 : 0);
                             for (std::size_t i = args.size(); i < fixedCount; ++i) {
@@ -2975,7 +2978,7 @@ private:
                             if (isVariadic) {
                                 TypeRef varElemType = ResolveType(*decl->params.back().type);
                                 bool const isSingleSpread =
-                                    (e->args.size() == fixedCount + 1 &&
+                                    (e->args.size() == fixedCount + 1 and
                                      dynamic_cast<SpreadExpr const *>(e->args[fixedCount].get()));
                                 if (isSingleSpread) {
                                     HirExprPtr sliceArg = std::move(args[fixedCount]);
@@ -3007,7 +3010,7 @@ private:
                             he->type = funcType.inner.back();
                             he->callee = std::move(callee);
                             for (std::size_t i = 0; i < args.size(); ++i) {
-                                if (i < e->args.size() && i + 1 < funcType.inner.size() &&
+                                if (i < e->args.size() and i + 1 < funcType.inner.size() and
                                     UnsuffixedIntegerLiteralFits(*e->args[i], funcType.inner[i])) {
                                     args[i]->type = funcType.inner[i];
                                 }
@@ -3030,13 +3033,13 @@ private:
                     args.push_back(std::move(lowered));
                 }
                 HirSymbol *sym = currentScope->Lookup(ident->name);
-                if (sym && sym->kind == HirSymbol::Kind::Func && !sym->funcOverloads.empty()) {
+                if (sym and sym->kind == HirSymbol::Kind::Func and !sym->funcOverloads.empty()) {
                     if (FuncDecl const *decl = LookupFunction(ident->name, argTypes)) {
                         TypeRef funcType =
                             MakeFuncType(decl->params, decl->returnType, decl->typeParams);
-                        if (funcType.kind == TypeRef::Kind::Func && !funcType.inner.empty()) {
+                        if (funcType.kind == TypeRef::Kind::Func and !funcType.inner.empty()) {
                             bool const isVariadic =
-                                !decl->params.empty() && decl->params.back().isVariadic;
+                                !decl->params.empty() and decl->params.back().isVariadic;
                             std::size_t const fixedCount =
                                 decl->params.size() - (isVariadic ? 1 : 0);
                             // Inject default arguments for omitted fixed
@@ -3053,7 +3056,7 @@ private:
                             if (isVariadic) {
                                 TypeRef varElemType = ResolveType(*decl->params.back().type);
                                 bool const isSingleSpread =
-                                    (e->args.size() == fixedCount + 1 &&
+                                    (e->args.size() == fixedCount + 1 and
                                      dynamic_cast<SpreadExpr const *>(e->args[fixedCount].get()));
                                 if (isSingleSpread) {
                                     // Pass the already-lowered slice
@@ -3087,7 +3090,7 @@ private:
                             he->type = funcType.inner.back();
                             he->callee = std::move(callee);
                             for (std::size_t i = 0; i < args.size(); ++i) {
-                                if (i < e->args.size() && i + 1 < funcType.inner.size() &&
+                                if (i < e->args.size() and i + 1 < funcType.inner.size() and
                                     UnsuffixedIntegerLiteralFits(*e->args[i], funcType.inner[i])) {
                                     args[i]->type = funcType.inner[i];
                                 }
@@ -3140,7 +3143,7 @@ private:
                                 if (UnsuffixedIntegerLiteralFits(*e->args[i], expectedType)) {
                                     preArgs[i]->type = expectedType;
                                 }
-                                else if (IsNullLiteral(*e->args[i]) &&
+                                else if (IsNullLiteral(*e->args[i]) and
                                          expectedType.kind == TypeRef::Kind::Pointer) {
                                     preArgs[i]->type = expectedType;
                                     if (auto *lit =
@@ -3164,10 +3167,10 @@ private:
                     return he;
                 }
                 // Interface dispatch: receiver type is a known interface
-                if (receiver && receiver->type.kind == TypeRef::Kind::Named) {
+                if (receiver and receiver->type.kind == TypeRef::Kind::Named) {
                     std::string const receiverName = BaseTypeName(receiver->type.name);
                     if (HirSymbol *sym = currentScope->Lookup(receiverName);
-                        sym && sym->kind == HirSymbol::Kind::Interface) {
+                        sym and sym->kind == HirSymbol::Kind::Interface) {
                         int const idx = InterfaceMethodIndex(receiverName, field->field);
                         if (idx >= 0) {
                             auto ic = std::make_unique<HirInterfaceCallExpr>();
@@ -3196,7 +3199,7 @@ private:
             }
 
             he->callee = LowerExpr(*e->callee);
-            bool const hasParamTypes = he->callee->type.kind == TypeRef::Kind::Func &&
+            bool const hasParamTypes = he->callee->type.kind == TypeRef::Kind::Func and
                                        he->callee->type.inner.size() == e->args.size() + 1;
             for (std::size_t i = 0; i < e->args.size(); ++i) {
                 he->args.push_back(hasParamTypes
@@ -3204,7 +3207,7 @@ private:
                                        : LowerExpr(*e->args[i]));
             }
             // Propagate return type if callee is a known func type
-            if (he->callee->type.kind == TypeRef::Kind::Func && !he->callee->type.inner.empty()) {
+            if (he->callee->type.kind == TypeRef::Kind::Func and !he->callee->type.inner.empty()) {
                 he->type = he->callee->type.inner.back();
             }
             return he;
@@ -3235,7 +3238,7 @@ private:
             else if (he->object->type.IsRange()) {
                 TypeRef elemType = he->object->type.inner.empty() ? TypeRef::MakeInt64()
                                                                   : he->object->type.inner[0];
-                if (e->field == "lo" || e->field == "hi") {
+                if (e->field == "lo" or e->field == "hi") {
                     he->type = elemType;
                 }
                 else if (e->field == "inclusive") {
@@ -3253,8 +3256,8 @@ private:
                 }
             }
             else if (std::string const ifaceName = NamedBaseTypeName(he->object->type);
-                     !ifaceName.empty() && interfaceDecls.contains(ifaceName)) {
-                if (e->field == "data" || e->field == "vtable") {
+                     !ifaceName.empty() and interfaceDecls.contains(ifaceName)) {
+                if (e->field == "data" or e->field == "vtable") {
                     he->type = TypeRef::MakePointer(TypeRef::MakeOpaque());
                 }
             }
@@ -3265,7 +3268,7 @@ private:
         }
         if (auto *e = dynamic_cast<StructInitExpr const *>(&expr)) {
             if (auto const [enumDecl, variant] = LookupEnumVariantInitializer(e->typeName);
-                enumDecl && variant) {
+                enumDecl and variant) {
                 if (!variant->namedFields.empty()) {
                     auto he = std::make_unique<HirEnumConstructExpr>();
                     he->location = e->location;
@@ -3389,7 +3392,7 @@ private:
         return he;
     }
 
-    static TypeRef InferUnaryType(TokenKind op, TypeRef const &t) {
+    static TypeRef InferUnaryType(TokenKind const op, TypeRef const &t) {
         switch (op) {
         case TokenKind::Bang:
             return TypeRef::MakeBool();
@@ -3402,19 +3405,19 @@ private:
         }
     }
 
-    static TypeRef InferBinaryType(TokenKind op, TypeRef const &l, TypeRef const &r) {
+    static TypeRef InferBinaryType(TokenKind const op, TypeRef const &l, TypeRef const &r) {
         using TK = TokenKind;
         switch (op) {
         case TK::Plus:
-            if (l.kind == TypeRef::Kind::Pointer && r.IsInteger()) {
+            if (l.kind == TypeRef::Kind::Pointer and r.IsInteger()) {
                 return l;
             }
-            if (l.IsInteger() && r.kind == TypeRef::Kind::Pointer) {
+            if (l.IsInteger() and r.kind == TypeRef::Kind::Pointer) {
                 return r;
             }
             return l.IsUnknown() ? r : l;
         case TK::Minus:
-            if (l.kind == TypeRef::Kind::Pointer && r.IsInteger()) {
+            if (l.kind == TypeRef::Kind::Pointer and r.IsInteger()) {
                 return l;
             }
             return l.IsUnknown() ? r : l;
@@ -3457,7 +3460,7 @@ private:
             hp->location = p->location;
             for (std::size_t i = 0; i < p->elements.size(); ++i) {
                 TypeRef elemType = TypeRef::MakeUnknown();
-                if (type.kind == TypeRef::Kind::Tuple && i < type.inner.size()) {
+                if (type.kind == TypeRef::Kind::Tuple and i < type.inner.size()) {
                     elemType = type.inner[i];
                 }
                 hp->elements.push_back(LowerLetPattern(*p->elements[i], elemType, isMut));
@@ -3478,7 +3481,7 @@ private:
             auto hp = std::make_unique<HirLiteralPattern>();
             hp->location = p->location;
             hp->type = LiteralType(p->value);
-            if (p->value.kind == TokenKind::IntLiteral ||
+            if (p->value.kind == TokenKind::IntLiteral or
                 p->value.kind == TokenKind::FloatLiteral) {
                 hp->value = StripNumericLiteralSuffix(p->value.text);
             }
@@ -3519,11 +3522,11 @@ private:
                     hp->discriminant = LookupEnumVariantDiscriminant(p->path[0], p->path[1]);
                     variant = LookupEnumVariant(p->path[0], p->path[1]);
                     if (variant) {
-                        hp->hasPayload = !variant->fields.empty() || !variant->namedFields.empty();
+                        hp->hasPayload = !variant->fields.empty() or !variant->namedFields.empty();
                     }
                     if (auto const enumIt = enumDecls.find(p->path[0]); enumIt != enumDecls.end()) {
                         for (auto const &variant : enumIt->second->variants) {
-                            if (variant.fields.empty() && variant.namedFields.empty()) {
+                            if (variant.fields.empty() and variant.namedFields.empty()) {
                                 if (auto disc =
                                         LookupEnumVariantDiscriminant(p->path[0], variant.name)) {
                                     hp->unitDiscriminants.push_back(*disc);
@@ -3552,12 +3555,12 @@ private:
                 }
             }
             for (std::size_t i = 0; i < p->args.size(); ++i) {
-                if (variant && i < variant->fields.size()) {
+                if (variant and i < variant->fields.size()) {
                     hp->argIndices.push_back(i);
                     hp->args.push_back(
                         LowerLetPattern(*p->args[i], ResolveType(*variant->fields[i]), false));
                 }
-                else if (variant && i - variant->fields.size() < variant->namedFields.size()) {
+                else if (variant and i - variant->fields.size() < variant->namedFields.size()) {
                     hp->argIndices.push_back(i);
                     hp->args.push_back(LowerLetPattern(
                         *p->args[i],
@@ -3961,7 +3964,7 @@ bool Hir::Dump(HirPackage const &package, std::filesystem::path const &path) {
                     params += ef.params[i].name + ": " + ef.params[i].type.ToString();
                 }
             }
-            if (ef.isVariadic && !ef.params.empty()) {
+            if (ef.isVariadic and !ef.params.empty()) {
                 params += ", ...";
             }
             std::string ret = ef.returnType.IsOpaque() ? "" : " -> " + ef.returnType.ToString();

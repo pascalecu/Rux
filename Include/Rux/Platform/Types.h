@@ -84,19 +84,19 @@ struct CpuFeatures {
         : mask(m) {
     }
 
-    [[nodiscard]] constexpr bool Has(CpuFeatures other) const noexcept {
+    [[nodiscard]] constexpr bool Has(CpuFeatures const other) const noexcept {
         return (mask & other.mask) == other.mask;
     }
 
-    constexpr CpuFeatures operator|(CpuFeatures other) const noexcept {
+    constexpr CpuFeatures operator|(CpuFeatures const other) const noexcept {
         return CpuFeatures(mask | other.mask);
     }
 
-    constexpr CpuFeatures operator&(CpuFeatures other) const noexcept {
+    constexpr CpuFeatures operator&(CpuFeatures const other) const noexcept {
         return CpuFeatures(mask & other.mask);
     }
 
-    constexpr CpuFeatures &operator|=(CpuFeatures other) noexcept {
+    constexpr CpuFeatures &operator|=(CpuFeatures const other) noexcept {
         mask |= other.mask;
         return *this;
     }
@@ -138,7 +138,7 @@ struct MemoryInfo {
     std::uint64_t available_bytes{0};
 };
 
-[[nodiscard]] constexpr std::string_view ToString(OS os) noexcept {
+[[nodiscard]] constexpr std::string_view ToString(const OS os) noexcept {
     switch (os) {
     case OS::Windows:
         return "Windows";
@@ -163,7 +163,7 @@ struct MemoryInfo {
     }
 }
 
-[[nodiscard]] constexpr std::string_view ToString(Arch arch) noexcept {
+[[nodiscard]] constexpr std::string_view ToString(Arch const arch) noexcept {
     switch (arch) {
     case Arch::X86_32:
         return "x86";
@@ -182,7 +182,7 @@ struct MemoryInfo {
     }
 }
 
-[[nodiscard]] constexpr bool Is64Bit(Arch arch) noexcept {
+[[nodiscard]] constexpr bool Is64Bit(Arch const arch) noexcept {
     switch (arch) {
     case Arch::X86_64:
     case Arch::ARM64:
@@ -193,7 +193,7 @@ struct MemoryInfo {
     }
 }
 
-[[nodiscard]] constexpr std::size_t GetPointerSize(Arch arch) noexcept {
+[[nodiscard]] constexpr std::size_t GetPointerSize(Arch const arch) noexcept {
     return Is64Bit(arch) ? Pointer64 : Pointer32;
 }
 } // namespace Rux::Platform

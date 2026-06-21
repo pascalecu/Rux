@@ -64,10 +64,10 @@ inline constexpr Arch HostArch = []() noexcept {
 
 inline constexpr DataModel HostDataModel = []() noexcept {
     if constexpr (RUX_OS_WINDOWS) {
-        return (RUX_ARCH_X64 || RUX_ARCH_ARM64) ? DataModel::LLP64 : DataModel::ILP32;
+        return (RUX_ARCH_X64 or RUX_ARCH_ARM64) ? DataModel::LLP64 : DataModel::ILP32;
     }
     else {
-        return (RUX_ARCH_X64 || RUX_ARCH_ARM64 || RUX_ARCH_RISCV64) ? DataModel::LP64
+        return (RUX_ARCH_X64 or RUX_ARCH_ARM64 or RUX_ARCH_RISCV64) ? DataModel::LP64
                                                                     : DataModel::ILP32;
     }
 }();
@@ -91,7 +91,7 @@ inline constexpr BuildMode HostBuildMode =
     RUX_BUILD_RELEASE ? BuildMode::Release : BuildMode::Debug;
 
 inline constexpr Endian HostEndianness = []() noexcept {
-#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if defined(__BYTE_ORDER__) and __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
     return Endian::Big;
 #else
     return Endian::Little;

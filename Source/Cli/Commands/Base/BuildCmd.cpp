@@ -87,10 +87,10 @@ int Cli::RunBuild(std::span<std::string_view const> args, GlobalOptions const &o
             isDebug = true;
             continue;
         }
-        if (arg == "-q" || arg == "--quiet") {
+        if (arg == "-q" or arg == "--quiet") {
             continue;
         }
-        if (arg == "-v" || arg == "--verbose") {
+        if (arg == "-v" or arg == "--verbose") {
             continue;
         }
         if (arg == "--stats") {
@@ -125,15 +125,15 @@ int Cli::RunBuild(std::span<std::string_view const> args, GlobalOptions const &o
             dumpRcu = true;
             continue;
         }
-        if (arg == "--profile" && i + 1 < args.size()) {
+        if (arg == "--profile" and i + 1 < args.size()) {
             profile = args[++i];
             continue;
         }
-        if (arg == "--target" && i + 1 < args.size()) {
+        if (arg == "--target" and i + 1 < args.size()) {
             target = args[++i];
             continue;
         }
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("build");
             return 0;
         }
@@ -163,7 +163,7 @@ int Cli::RunBuild(std::span<std::string_view const> args, GlobalOptions const &o
         return 1;
     }
     std::string const hostTarget = HostTargetTriple();
-    if (hostTarget != "unknown" && targetName != hostTarget) {
+    if (hostTarget != "unknown" and targetName != hostTarget) {
         // Target selection is currently used for source/dependency choice.
         // Linking foreign executable formats is kept explicit until the
         // backends support it end-to-end.
@@ -179,7 +179,7 @@ int Cli::RunBuild(std::span<std::string_view const> args, GlobalOptions const &o
         profileName = profile;
     }
 
-    if (!opts.quiet && !showStats) {
+    if (!opts.quiet and !showStats) {
         std::print("Compiling {} v{} [{}]\n", manifest->package.name, manifest->package.version,
                    manifestPath->parent_path().string());
     }
@@ -463,7 +463,7 @@ int Cli::RunBuild(std::span<std::string_view const> args, GlobalOptions const &o
                 }
             }
             for (auto const &pkgName : imports) {
-                if (pkgName == pendingManifest.package.name || pkgName == packageName) {
+                if (pkgName == pendingManifest.package.name or pkgName == packageName) {
                     continue;
                 }
                 if (!enqueueDependency(pkgName, pendingManifest, pendingRoot)) {
@@ -615,7 +615,7 @@ int Cli::RunBuild(std::span<std::string_view const> args, GlobalOptions const &o
 
     auto const root = manifestPath->parent_path();
     auto const binDir = ResolveBuildOutputDir(root, *manifest, profileName);
-    bool const buildDll = (manifest->package.type == "Dll" || manifest->package.type == "dll");
+    bool const buildDll = (manifest->package.type == "Dll" or manifest->package.type == "dll");
     std::string outputName = manifest->package.name;
     if constexpr (HostOS == OS::Windows) {
         outputName += buildDll ? ".dll" : ".exe";
@@ -643,7 +643,7 @@ int Cli::RunBuild(std::span<std::string_view const> args, GlobalOptions const &o
     }
     stats.peakMemoryBytes = PeakMemoryBytes();
 
-    if (!opts.quiet && showStats) {
+    if (!opts.quiet and showStats) {
         PrintBuildStats(exePath, profileName, stats);
         return 0;
     }
@@ -661,7 +661,7 @@ int Cli::RunClean(std::span<std::string_view const> args, GlobalOptions const &o
             tempOnly = true;
             continue;
         }
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("clean");
             return 0;
         }
@@ -722,7 +722,7 @@ int Cli::RunRun(std::span<std::string_view const> args, GlobalOptions const &opt
             isRelease = true;
             continue;
         }
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("run");
             return 0;
         }
@@ -760,7 +760,7 @@ int Cli::RunRun(std::span<std::string_view const> args, GlobalOptions const &opt
     std::string_view profileName = isRelease ? "Release" : "Debug";
     auto root = manifestPath->parent_path();
     auto binDir = ResolveBuildOutputDir(root, *manifest, profileName);
-    bool const runDll = (manifest->package.type == "Dll" || manifest->package.type == "dll");
+    bool const runDll = (manifest->package.type == "Dll" or manifest->package.type == "dll");
     if (runDll) {
         std::print(stderr, "error: cannot run a DLL package directly\n");
         return 1;
@@ -776,7 +776,7 @@ int Cli::RunRun(std::span<std::string_view const> args, GlobalOptions const &opt
         std::print(stderr, "error: executable not found: '{}'\n", exePath.string());
         return 1;
     }
-    if (opts.verbose && !opts.quiet) {
+    if (opts.verbose and !opts.quiet) {
         std::print("     Running `{}`\n", exePath.string());
     }
 #if RUX_OS_WINDOWS

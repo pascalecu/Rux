@@ -78,7 +78,7 @@ int Cli::RunFmt(std::span<std::string_view const> args, GlobalOptions const &opt
             manifestOnly = true;
             continue;
         }
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("fmt");
             return 0;
         }
@@ -182,7 +182,7 @@ int Cli::RunFmt(std::span<std::string_view const> args, GlobalOptions const &opt
         }
         // TODO: source formatter
     }
-    if (fileCount == 0 && !opts.quiet) {
+    if (fileCount == 0 and !opts.quiet) {
         std::print("  No .rux files found.\n");
     }
     return 0;
@@ -195,7 +195,7 @@ int Cli::RunDoc(std::span<std::string_view const> args, GlobalOptions const &opt
             openAfter = true;
             continue;
         }
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("doc");
             return 0;
         }
@@ -217,7 +217,7 @@ int Cli::RunDoc(std::span<std::string_view const> args, GlobalOptions const &opt
 
     // TODO: documentation generator
 
-    if (openAfter && !opts.quiet) {
+    if (openAfter and !opts.quiet) {
         std::print("     Opening documentation...\n");
     }
 
@@ -231,7 +231,7 @@ int Cli::RunList(std::span<std::string_view const> args, GlobalOptions const &op
             global = true;
             continue;
         }
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("list");
             return 0;
         }
@@ -309,15 +309,15 @@ int Cli::RunNew(std::span<std::string_view const> const args, GlobalOptions cons
             lib = true;
             continue;
         }
-        if (arg == "--path" && i + 1 < args.size()) {
+        if (arg == "--path" and i + 1 < args.size()) {
             customPath = args[++i];
             continue;
         }
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("new");
             return 0;
         }
-        if (!arg.starts_with('-') && name.empty()) {
+        if (!arg.starts_with('-') and name.empty()) {
             name = arg;
             continue;
         }
@@ -329,7 +329,7 @@ int Cli::RunNew(std::span<std::string_view const> const args, GlobalOptions cons
         PrintHelpFor("new");
         return 1;
     }
-    auto const type = (lib && !bin) ? PackageType::SharedLibrary : PackageType::Executable;
+    auto const type = (lib and !bin) ? PackageType::SharedLibrary : PackageType::Executable;
     std::filesystem::path root;
     if (!customPath.empty()) {
         root = std::filesystem::path(customPath) / name;
@@ -357,7 +357,7 @@ int Cli::RunUpdate(std::span<std::string_view const> args, GlobalOptions const &
             global = true;
             continue;
         }
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("update");
             return 0;
         }
@@ -414,7 +414,7 @@ int Cli::RunUpdate(std::span<std::string_view const> args, GlobalOptions const &
     std::string const updateTarget = HostTargetTriple();
     for (auto const &dep : manifest->EffectiveDependencies(updateTarget)) {
         std::string const packageName = DependencyPackageName(dep);
-        if (dep.path.empty() && !queued.count(packageName)) {
+        if (dep.path.empty() and !queued.count(packageName)) {
             queue.push_back(packageName);
             queued.insert(packageName);
         }
@@ -478,7 +478,7 @@ int Cli::RunUpdate(std::span<std::string_view const> args, GlobalOptions const &
         if (auto const depManifest = Manifest::Load(pkgDir / "Rux.toml")) {
             for (auto const &dep : depManifest->EffectiveDependencies(updateTarget)) {
                 std::string const depPackageName = DependencyPackageName(dep);
-                if (dep.path.empty() && !queued.count(depPackageName)) {
+                if (dep.path.empty() and !queued.count(depPackageName)) {
                     queue.push_back(depPackageName);
                     queued.insert(depPackageName);
                 }
@@ -500,7 +500,7 @@ int Cli::RunInfo(std::span<std::string_view const> args, GlobalOptions const &op
     bool jsonOutput = false;
 
     for (auto arg : args) {
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("info");
             return 0;
         }
@@ -510,7 +510,7 @@ int Cli::RunInfo(std::span<std::string_view const> args, GlobalOptions const &op
             continue;
         }
 
-        if (!arg.starts_with('-') && packageName.empty()) {
+        if (!arg.starts_with('-') and packageName.empty()) {
             packageName = arg;
             continue;
         }

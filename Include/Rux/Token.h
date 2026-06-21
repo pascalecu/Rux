@@ -95,8 +95,8 @@ enum class TokenKind : std::uint8_t {
     GreaterGreater, // >>
 
     // Logical operators
-    AmpAmp,   // &&
-    PipePipe, // ||
+    AmpAmp,   // and
+    PipePipe, // or
     Bang,     // !
 
     // Comparison operators

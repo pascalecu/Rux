@@ -53,7 +53,7 @@ int Cli::RunInstall(std::span<std::string_view const> args, GlobalOptions const 
     bool packageFromDev = false;
 
     for (auto arg : args) {
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("install");
             return 0;
         }
@@ -63,7 +63,7 @@ int Cli::RunInstall(std::span<std::string_view const> args, GlobalOptions const 
             continue;
         }
 
-        if (!arg.starts_with('-') && packageSpec.empty()) {
+        if (!arg.starts_with('-') and packageSpec.empty()) {
             packageSpec = arg;
             continue;
         }
@@ -136,7 +136,7 @@ int Cli::RunInstall(std::span<std::string_view const> args, GlobalOptions const 
 
     for (auto const &dep : manifest->EffectiveDependencies(installTarget)) {
         if (std::string const packageName = DependencyPackageName(dep);
-            dep.path.empty() && !queued.contains(packageName)) {
+            dep.path.empty() and !queued.contains(packageName)) {
             queue.push_back(packageName);
             queued.insert(packageName);
         }
@@ -204,7 +204,7 @@ int Cli::RunInstall(std::span<std::string_view const> args, GlobalOptions const 
         if (auto const depManifest = Manifest::Load(pkgDir / "Rux.toml")) {
             for (auto const &dep : depManifest->EffectiveDependencies(installTarget)) {
                 if (std::string const depPackageName = DependencyPackageName(dep);
-                    dep.path.empty() && !queued.contains(depPackageName)) {
+                    dep.path.empty() and !queued.contains(depPackageName)) {
                     queue.push_back(depPackageName);
                     queued.insert(depPackageName);
                 }
@@ -222,11 +222,11 @@ int Cli::RunInstall(std::span<std::string_view const> args, GlobalOptions const 
 int Cli::RunUninstall(std::span<std::string_view const> args, GlobalOptions const &opts) {
     std::string_view packageName;
     for (auto arg : args) {
-        if (arg == "-h" || arg == "--help") {
+        if (arg == "-h" or arg == "--help") {
             PrintHelpFor("uninstall");
             return 0;
         }
-        if (!arg.starts_with('-') && packageName.empty()) {
+        if (!arg.starts_with('-') and packageName.empty()) {
             packageName = arg;
             continue;
         }

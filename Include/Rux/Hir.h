@@ -132,7 +132,7 @@ struct HirPostfixExpr : HirExpr {
     HirExprPtr operand;
 };
 
-// a + b, a && b, a == b, etc.
+// a + b, a and b, a == b, etc.
 struct HirBinaryExpr : HirExpr {
     TokenKind op;
     HirExprPtr left;

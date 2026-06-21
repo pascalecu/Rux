@@ -33,7 +33,7 @@ using ScaffoldResult = std::expected<void, std::string>;
  */
 static ScaffoldResult WriteFile(fs::path const &path, std::string_view const content,
                                 bool const skipIfExists) {
-    if (skipIfExists && fs::exists(path)) {
+    if (skipIfExists and fs::exists(path)) {
         return {};
     }
 
@@ -50,7 +50,7 @@ static ScaffoldResult WriteFile(fs::path const &path, std::string_view const con
  * @return std::expected<void, std::string> error message on failure
  */
 static ScaffoldResult MakeDir(fs::path const &path) {
-    if (std::error_code ec; fs::create_directories(path, ec) || !ec) {
+    if (std::error_code ec; fs::create_directories(path, ec) or !ec) {
         return {};
     }
     return std::unexpected(std::format("failed to create directory: {}", path.string()));
@@ -58,7 +58,7 @@ static ScaffoldResult MakeDir(fs::path const &path) {
 
 bool ScaffoldPackage(fs::path const &root, std::string const &name, PackageType const type,
                      bool const initMode) {
-    if (!initMode && fs::exists(root)) {
+    if (!initMode and fs::exists(root)) {
         std::println(stderr, "error: directory '{}' already exists", root.string());
         return false;
     }
@@ -77,7 +77,7 @@ bool ScaffoldPackage(fs::path const &root, std::string const &name, PackageType 
         return false;
     }
 
-    if (auto const tomlPath = root / "Rux.toml"; !initMode || !fs::exists(tomlPath)) {
+    if (auto const tomlPath = root / "Rux.toml"; !initMode or !fs::exists(tomlPath)) {
         Manifest m;
         m.package = {.name = name,
                      .version = "0.1.0",
