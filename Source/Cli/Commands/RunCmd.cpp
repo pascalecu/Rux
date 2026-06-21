@@ -1,33 +1,34 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
-#include "Rux/Asm.h"
-#include "Rux/Cli/Cli.h"
-#include "Rux/Cli/CliInternals.h"
-#include "Rux/Manifest.h"
-#include "Rux/Platform/Defines.h"
-#include "Rux/Platform/Host.h"
-#include "Rux/Platform/Types.h"
-
-#include <filesystem>
-#include <print>
-#include <span>
-#include <string>
-#include <string_view>
-#include <vector>
+#include "Rux/Cli/Cli.h"          // for GlobalOptions, Cli
+#include "Rux/Cli/CliInternals.h" // for LoadManifest, RequireManifest, ResolveBuildOutputDir
+#include "Rux/Manifest.h"         // for Manifest, Package
+#include "Rux/Platform/Defines.h" // for RUX_OS_WINDOWS
+#include "Rux/Platform/Host.h"    // for HostOS
+#include "Rux/Platform/Types.h"   // for OS
 
 #if RUX_OS_WINDOWS
     #ifndef WIN32_LEAN_AND_MEAN
         #define WIN32_LEAN_AND_MEAN
-    #endif
-    #ifndef NOMINMAX
         #define NOMINMAX
     #endif
     #include <windows.h>
 #else
-    #include <sys/wait.h>
-    #include <unistd.h>
+    #include <sys/types.h> // for pid_t
+    #include <sys/wait.h>  // for waitpid
+    #include <unistd.h>    // for _exit, execv, fork
 #endif
+
+#include <cstdio>      // for stderr
+#include <cstdlib>     // for WEXITSTATUS, WIFEXITED
+#include <filesystem>  // for path, exists, operator/
+#include <optional>    // for optional
+#include <print>       // for print
+#include <span>        // for span
+#include <string>      // for basic_string, char_traits, operator==, string
+#include <string_view> // for basic_string_view, operator==, string_view
+#include <vector>      // for vector
 
 namespace Rux {
 int Cli::RunRun(std::span<std::string_view const> args, GlobalOptions const &opts) {

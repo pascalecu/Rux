@@ -1,16 +1,32 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
-#include "Rux/Ast.h"
-#include "Rux/Cli/CliInternals.h"
-#include "Rux/Manifest.h"
-#include "Rux/Sema.h"
-#include "Rux/SourceLoader.h"
+#include "Rux/Ast.h"              // for Decl, UseDecl, Module, ModuleDecl
+#include "Rux/Cli/Cli.h"          // for GlobalOptions, Cli
+#include "Rux/Cli/CliInternals.h" // for DependencyPackageName, HostTargetTriple, PruneModuleFo...
+#include "Rux/Lexer.h"            // for LexerResult, LexerDiagnostic, Lexer
+#include "Rux/Manifest.h"         // for Dependency, Manifest, Package
+#include "Rux/Parser.h"           // for ParseResult, ParserDiagnostic, Parser
+#include "Rux/Sema.h"             // for DepPackage, SemaDiagnostic, Sema, SemaResult
+#include "Rux/SourceLoader.h"     // for SourceFile, SourceLoadResult, SourceLoader
+#include "Rux/Token.h"            // for Token, SourceLocation
 
-#include <filesystem>
-#include <functional>
-#include <string>
-#include <unordered_set>
+#include <algorithm>     // for __find, find
+#include <cstdio>        // for stderr, size_t
+#include <filesystem>    // for path, operator/, exists, operator==
+#include <format>        // for format
+#include <functional>    // for function
+#include <iterator>      // for next
+#include <memory>        // for unique_ptr
+#include <optional>      // for optional
+#include <print>         // for println, print
+#include <span>          // for span
+#include <string>        // for basic_string, char_traits, string, hash, operator==
+#include <string_view>   // for basic_string_view, string_view, hash, operator==
+#include <unordered_map> // for unordered_map
+#include <unordered_set> // for unordered_set
+#include <utility>       // for move, get
+#include <vector>        // for vector
 
 namespace Rux {
 

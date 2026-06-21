@@ -2,15 +2,37 @@
 // SPDX-License-Identifier: MIT
 
 
-#include "Rux/Cli/Cli.h"
-#include "Rux/Cli/CliInternals.h"
-#include "Rux/Linker.h"
-#include "Rux/Rcu.h"
-#include "Rux/Sema.h"
-#include "Rux/SourceLoader.h"
+#include "Rux/Asm.h"              // for Asm
+#include "Rux/Ast.h"              // for Decl, UseDecl, Module, ModuleDecl
+#include "Rux/Cli/Cli.h"          // for GlobalOptions, Cli
+#include "Rux/Cli/CliInternals.h" // for BuildStats, ElapsedMs, CountLines, CountTokens, Depend...
+#include "Rux/Hir.h"              // for Hir, HirPackage
+#include "Rux/Lexer.h"            // for LexerResult, LexerDiagnostic, Lexer
+#include "Rux/Linker.h"           // for LinkerError, Linker
+#include "Rux/Lir.h"              // for Lir, LirPackage
+#include "Rux/Manifest.h"         // for Manifest, Package, Dependency
+#include "Rux/Parser.h"           // for ParseResult, ParserDiagnostic, Parser
+#include "Rux/Platform/Host.h"    // for HostOS
+#include "Rux/Platform/Types.h"   // for OS
+#include "Rux/Rcu.h"              // for Rcu, RcuFile
+#include "Rux/Sema.h"             // for DepPackage, SemaDiagnostic, Sema, SemaResult
+#include "Rux/SourceLoader.h"     // for SourceFile, SourceLoadResult, SourceLoader
+#include "Rux/Token.h"            // for Token, SourceLocation
 
-#include <chrono>
-#include <unordered_set>
+#include <chrono>        // for steady_clock
+#include <cstdio>        // for stderr, size_t
+#include <filesystem>    // for path, operator/, create_directories, relative, exists
+#include <memory>        // for unique_ptr
+#include <optional>      // for optional
+#include <print>         // for print
+#include <span>          // for span
+#include <string>        // for basic_string, char_traits, hash, string, operator==
+#include <string_view>   // for basic_string_view, operator==, string_view
+#include <system_error>  // for error_code
+#include <unordered_map> // for unordered_map
+#include <unordered_set> // for unordered_set
+#include <utility>       // for move, get
+#include <vector>        // for vector
 
 namespace Rux {
 int Cli::RunBuild(std::span<std::string_view const> args, GlobalOptions const &opts) {

@@ -1,8 +1,18 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
-#include "Rux/Cli/Cli.h"
-#include "Rux/Cli/CliInternals.h"
+#include "Rux/Cli/Cli.h"          // for Cli, GlobalOptions
+#include "Rux/Cli/CliInternals.h" // for LoadManifest, RequireManifest
+#include "Rux/Manifest.h"         // for Manifest, Build
+
+#include <cstdio>       // for stderr
+#include <filesystem>   // for path, operator/, exists, remove_all
+#include <optional>     // for optional
+#include <print>        // for print
+#include <span>         // for span
+#include <string>       // for basic_string, char_traits
+#include <string_view>  // for basic_string_view, operator==, string_view
+#include <system_error> // for error_code
 
 namespace Rux {
 int Cli::RunClean(std::span<std::string_view const> const args, GlobalOptions const &opts) {

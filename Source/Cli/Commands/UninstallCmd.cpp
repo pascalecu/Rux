@@ -1,10 +1,19 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
+#include "Rux/Cli/Cli.h"          // for GlobalOptions, Cli
+#include "Rux/Cli/CliInternals.h" // for DependencyPackageName, HostTargetTriple, LoadManifest
+#include "Rux/Manifest.h"         // for Dependency, Manifest
 
-#include "Rux/Cli/CliInternals.h"
-
-#include <string_view>
+#include <cstdio>       // for stderr
+#include <filesystem>   // for path, exists, operator/, remove_all
+#include <optional>     // for optional
+#include <print>        // for print
+#include <span>         // for span
+#include <string>       // for basic_string, char_traits
+#include <string_view>  // for basic_string_view, string_view, operator==
+#include <system_error> // for error_code
+#include <vector>       // for vector
 
 namespace Rux {
 namespace {

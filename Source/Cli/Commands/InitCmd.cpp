@@ -1,10 +1,14 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
-#include "Rux/Cli/Cli.h"
-#include "Rux/Package.h"
+#include "Rux/Cli/Cli.h" // for GlobalOptions, Cli
+#include "Rux/Package.h" // for PackageType, ScaffoldPackage
 
-#include <print>
+#include <filesystem>  // for current_path, path
+#include <print>       // for print
+#include <span>        // for span
+#include <string>      // for basic_string, char_traits
+#include <string_view> // for basic_string_view, operator==, string_view
 
 namespace Rux {
 int Cli::RunInit(std::span<std::string_view const> args, GlobalOptions const &opts) {

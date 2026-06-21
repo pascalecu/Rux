@@ -6,8 +6,13 @@
 
 #include <Rux/Version.h>
 #include <algorithm>
+#include <array>
+#include <concepts>
+#include <cstdio>
 #include <functional>
+#include <iterator>
 #include <print>
+#include <ranges>
 #include <span>
 #include <string_view>
 
@@ -20,20 +25,10 @@
     #endif
     #include <windows.h>
 #else
-    #include <unistd.h> // for STDOUT_FILENO
-    #if defined(__has_include)
-        // for winsize
-        #if __has_include(<sys/termios.h>)
-        #elif __has_include(<termios.h>)
-            #include <termios.h>
-        #endif
-        #if __has_include(<stropts.h>)
-            #include <stropts.h>
-        #endif
-    #endif
-    #include <sys/ioctl.h> // for TIOCGWINSZ, ioctl
+    #include <sys/ioctl.h>
+    #include <termios.h>
+    #include <unistd.h>
 #endif
-
 
 namespace Rux {
 using namespace std::string_view_literals;

@@ -1,12 +1,18 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
-#include "Rux/Cli/Cli.h"
-#include "Rux/Cli/CliInternals.h"
-#include "Rux/Manifest.h"
+#include "Rux/Cli/Cli.h"          // for Cli, GlobalOptions (ptr only)
+#include "Rux/Cli/CliInternals.h" // for RegistryPackagesDir
+#include "Rux/Manifest.h"         // for Manifest, Dependency, Package
 
-#include <filesystem>
-#include <print>
+#include <cstdio>      // for stderr, size_t
+#include <filesystem>  // for path, operator/, current_path, exists
+#include <optional>    // for optional
+#include <print>       // for print
+#include <span>        // for span
+#include <string>      // for basic_string, char_traits, string
+#include <string_view> // for basic_string_view, operator==, string_view
+#include <vector>      // for vector
 
 namespace Rux {
 // TODO: Make this look in the registry instead of installed packages

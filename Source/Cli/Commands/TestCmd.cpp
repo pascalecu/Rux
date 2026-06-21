@@ -1,20 +1,10 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
-#include "Rux/Asm.h"
-#include "Rux/Cli/Cli.h"
-#include "Rux/Cli/CliInternals.h"
-#include "Rux/Manifest.h"
-#include "Rux/Platform/Defines.h"
-#include "Rux/Platform/Types.h"
-
-#include <filesystem>
-#include <print>
-#include <ranges>
-#include <span>
-#include <string>
-#include <string_view>
-#include <vector>
+#include "Rux/Cli/Cli.h"          // for GlobalOptions, Cli
+#include "Rux/Cli/CliInternals.h" // for RequireManifest, ResolveBuildOutputDir
+#include "Rux/Manifest.h"         // for Manifest, Package
+#include "Rux/Platform/Defines.h" // for RUX_OS_WINDOWS
 
 #if RUX_OS_WINDOWS
     #ifndef WIN32_LEAN_AND_MEAN
@@ -25,9 +15,21 @@
     #endif
     #include <windows.h>
 #else
-    #include <sys/wait.h>
-    #include <unistd.h>
+    #include <sys/wait.h> // for pid_t
+    #include <unistd.h>   // for waitpid
 #endif
+
+#include <algorithm>    // for __sort, sort
+#include <cstdio>       // for stderr
+#include <cstdlib>      // for WEXITSTATUS, WIFEXITED
+#include <filesystem>   // for path, current_path, directory_iterator, operator/, dir...
+#include <optional>     // for optional
+#include <print>        // for print
+#include <span>         // for span
+#include <string>       // for basic_string, char_traits, operator==, string, operator+
+#include <string_view>  // for basic_string_view, operator==, string_view
+#include <system_error> // for error_code
+#include <vector>       // for vector
 
 namespace Rux {
 int Cli::RunTest(std::span<std::string_view const> args, GlobalOptions const &opts) {
