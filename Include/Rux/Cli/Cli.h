@@ -24,8 +24,7 @@ public:
     Cli(int argc, char *argv[]);
     [[nodiscard]] int Run() const;
 
-private:
-    std::span<char *const> args;
+    using CommandFn = int (*)(std::span<std::string_view const>, GlobalOptions const &);
 
     // Argument parsing
     static GlobalOptions ParseGlobalOptions(std::span<std::string_view const> args);
@@ -49,6 +48,9 @@ private:
     static int RunUpdate(std::span<std::string_view const> args, GlobalOptions const &opts);
     static int RunInfo(std::span<std::string_view const> args, GlobalOptions const &opts);
     static int RunCheck(std::span<std::string_view const> args, GlobalOptions const &opts);
+
+private:
+    std::span<char *const> args;
 
     // Help printers
     static void PrintHelp();

@@ -42,14 +42,45 @@ using namespace Rux;
 using namespace Platform;
 using namespace Misc;
 
+namespace {
+
+std::unordered_map<std::string_view, Cli::CommandFn> const kCommands = {
+    {"help", Cli::RunHelp},
+    {"version", [](auto, auto const &opts) { return Cli::RunVersion(opts); }},
+    {"build", Cli::RunBuild},
+    {"clean", Cli::RunClean},
+    {"doc", Cli::RunDoc},
+    {"fmt", Cli::RunFmt},
+    {"init", Cli::RunInit},
+    {"install", Cli::RunInstall},
+    {"uninstall", Cli::RunUninstall},
+    {"list", Cli::RunList},
+    {"new", Cli::RunNew},
+    {"add", Cli::RunAdd},
+    {"remove", Cli::RunRemove},
+    {"run", Cli::RunRun},
+    {"test", Cli::RunTest},
+    {"update", Cli::RunUpdate},
+    {"info", Cli::RunInfo},
+    {"check", Cli::RunCheck},
+};
+
+bool IsGlobalFlag(std::string_view const arg) {
+    return arg == "-h" or arg == "--help" or arg == "-V" or arg == "--version" or arg == "-q" or
+           arg == "--quiet" or arg == "-v" or arg == "--verbose" or arg == "--color" or
+           arg.starts_with("--color=");
+}
+
+} // namespace
+
 Cli::Cli(int const argc, char *argv[])
     : args(argv, argc) {
 }
 
 int Cli::Run() const {
-    // Collect all arguments as string_views (skip argv[0])
     std::vector<std::string_view> sv;
     sv.reserve(args.size());
+
     for (auto *a : args.subspan(1)) {
         sv.emplace_back(a);
     }
@@ -59,40 +90,31 @@ int Cli::Run() const {
         return 0;
     }
 
-    // Walk through arguments collecting global flags and finding the command.
-    // Global flags may appear before OR after the command name.
+    std::vector<std::string_view> globals;
+    std::vector<std::string_view> cmdArgs;
     std::string_view command;
     bool foundCommand = false;
-    std::vector<std::string_view> preCommandGlobals;
-    std::vector<std::string_view> cmdArgs;
 
     for (std::size_t i = 0; i < sv.size(); ++i) {
-        std::string_view arg = sv[i];
+        auto arg = sv[i];
 
         if (!foundCommand) {
             if (arg == "-h" or arg == "--help") {
-                PrintHelp();
-                return 0;
+                return PrintHelp(), 0;
             }
             if (arg == "-V" or arg == "--version") {
-                PrintVersion();
-                return 0;
+                return PrintVersion(), 0;
             }
-            if (arg == "-q" or arg == "--quiet" or arg == "-v" or arg == "--verbose") {
-                preCommandGlobals.push_back(arg);
-                continue;
-            }
-            if (arg == "--color") {
-                preCommandGlobals.push_back(arg);
-                if (i + 1 < sv.size()) {
-                    preCommandGlobals.push_back(sv[++i]);
+
+            if (IsGlobalFlag(arg)) {
+                globals.push_back(arg);
+
+                if (arg == "--color" and i + 1 < sv.size()) {
+                    globals.push_back(sv[++i]);
                 }
                 continue;
             }
-            if (arg.starts_with("--color=")) {
-                preCommandGlobals.push_back(arg);
-                continue;
-            }
+
             command = arg;
             foundCommand = true;
         }
@@ -106,72 +128,20 @@ int Cli::Run() const {
         return 0;
     }
 
-    // Merge pre-command globals with command args for option parsing
     std::vector<std::string_view> allArgs;
-    allArgs.insert(allArgs.end(), preCommandGlobals.begin(), preCommandGlobals.end());
+    allArgs.reserve(globals.size() + cmdArgs.size());
+    allArgs.insert(allArgs.end(), globals.begin(), globals.end());
     allArgs.insert(allArgs.end(), cmdArgs.begin(), cmdArgs.end());
 
-    GlobalOptions opts = ParseGlobalOptions(allArgs);
-    std::span<std::string_view const> rest(cmdArgs);
+    GlobalOptions const opts = ParseGlobalOptions(allArgs);
 
-    if (command == "help") {
-        return RunHelp(rest, opts);
-    }
-    if (command == "version") {
-        return RunVersion(opts);
-    }
-    if (command == "build") {
-        return RunBuild(rest, opts);
-    }
-    if (command == "clean") {
-        return RunClean(rest, opts);
-    }
-    if (command == "doc") {
-        return RunDoc(rest, opts);
-    }
-    if (command == "fmt") {
-        return RunFmt(rest, opts);
-    }
-    if (command == "init") {
-        return RunInit(rest, opts);
-    }
-    if (command == "install") {
-        return RunInstall(rest, opts);
-    }
-    if (command == "uninstall") {
-        return RunUninstall(rest, opts);
-    }
-    if (command == "list") {
-        return RunList(rest, opts);
-    }
-    if (command == "new") {
-        return RunNew(rest, opts);
-    }
-    if (command == "add") {
-        return RunAdd(rest, opts);
-    }
-    if (command == "remove") {
-        return RunRemove(rest, opts);
-    }
-    if (command == "run") {
-        return RunRun(rest, opts);
-    }
-    if (command == "test") {
-        return RunTest(rest, opts);
-    }
-    if (command == "update") {
-        return RunUpdate(rest, opts);
-    }
-    if (command == "info") {
-        return RunInfo(rest, opts);
-    }
-    if (command == "check") {
-        return RunCheck(rest, opts);
+    std::span<std::string_view const> const rest(cmdArgs);
+
+    auto const it = kCommands.find(command);
+    if (it == kCommands.end()) {
+        PrintUnknownCommand(command);
+        return 1;
     }
 
-    PrintUnknownCommand(command);
-    return 1;
+    return it->second(rest, opts);
 }
-
-// you can see the implementation in .\Include\Rux\Cli\CliInternals.h
-// all previous functions here are in Rux::Misc
