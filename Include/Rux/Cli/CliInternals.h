@@ -18,17 +18,11 @@
 #include "Rux/Asm.h"
 #include "Rux/Ast.h"
 #include "Rux/Cli/Cli.h"
-#include "Rux/Hir.h"
 #include "Rux/Lexer.h"
-#include "Rux/Linker.h"
-#include "Rux/Lir.h"
 #include "Rux/Manifest.h"
-#include "Rux/Package.h"
 #include "Rux/Parser.h"
 #include "Rux/Platform/Defines.h"
 #include "Rux/Platform/Host.h"
-#include "Rux/Rcu.h"
-#include "Rux/Sema.h"
 #include "Rux/Version.h"
 
 #include <algorithm>
@@ -49,11 +43,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
-
-// This is separate from the other ifdef because otherwise clang-format attempts
-// to change the order, which makes MSVC cry.
 
 #if RUX_OS_WINDOWS
     #ifndef WIN32_LEAN_AND_MEAN
@@ -74,10 +64,12 @@
     #include <unistd.h>
 #endif
 
-#include "Rux/SourceLoader.h"
-
 namespace Rux::Misc {
+
 using namespace Platform;
+
+inline constexpr std::string_view kRegistryUrl =
+    "https://raw.githubusercontent.com/rux-lang/Registry/refs/heads/main/Packages.json";
 
 struct BuildStats {
     std::chrono::milliseconds lexing{0};
@@ -117,24 +109,14 @@ inline std::size_t CountLines(std::string_view const source) {
     if (source.empty()) {
         return 0;
     }
-
-    std::size_t lines = 0;
-    for (char const ch : source) {
-        if (ch == '\n') {
-            ++lines;
-        }
-    }
-    if (source.back() != '\n') {
-        ++lines;
-    }
-    return lines;
+    return std::ranges::count(source, '\n') + (source.back() != '\n' ? 1 : 0);
 }
 
 inline std::size_t CountTokens(LexerResult const &result) {
     if (result.tokens.empty()) {
         return 0;
     }
-    return result.tokens.back().IsEof() ? result.tokens.size() - 1 : result.tokens.size();
+    return result.tokens.size() - static_cast<std::size_t>(result.tokens.back().IsEof());
 }
 
 inline std::string FormatNumber(std::uintmax_t value) {
@@ -146,19 +128,14 @@ inline std::string FormatNumber(std::uintmax_t value) {
 }
 
 inline std::string FormatDecimal(double const value, int const decimals) {
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(decimals) << value;
-    std::string text = oss.str();
-    auto dot = text.find('.');
-    if (dot == std::string::npos) {
-        return text;
-    }
-
-    while (!text.empty() and text.back() == '0') {
-        text.pop_back();
-    }
-    if (!text.empty() and text.back() == '.') {
-        text.pop_back();
+    std::string text = std::format("{:.{}f}", value, decimals);
+    if (text.find('.') != std::string::npos) {
+        while (!text.empty() && text.back() == '0') {
+            text.pop_back();
+        }
+        if (!text.empty() && text.back() == '.') {
+            text.pop_back();
+        }
     }
     return text;
 }
@@ -190,16 +167,13 @@ inline std::string FormatSize(std::uintmax_t const bytes) {
     if (kb < 1024.0) {
         return FormatNumber(std::llround(kb)) + " KB";
     }
-
-    double const mb = kb / 1024.0;
-    return FormatDecimal(mb, 2) + " MB";
+    return FormatDecimal(kb / 1024.0, 2) + " MB";
 }
 
 inline std::string TargetName() {
     if constexpr (HostArch == Arch::Unknown) {
         return std::string{ToString(HostOS)};
     }
-
     return std::format("{} {}", ToString(HostOS), ToString(HostArch));
 }
 
@@ -215,7 +189,6 @@ inline bool IsSupportedTargetTriple(std::string_view const target) {
     constexpr std::array supported_targets{"linux-x64",     "windows-x64",   "macos-x64",
                                            "macos-aarch64", "freebsd-x64",   "openbsd-x64",
                                            "netbsd-x64",    "dragonfly-x64", "illumos-x64"};
-
     return std::ranges::contains(supported_targets, target);
 }
 
@@ -236,14 +209,13 @@ inline std::string_view TargetOsName(std::string_view const target) {
     if (os_prefix == "macos") {
         return "macOS";
     }
+    if (os_prefix == "illumos") {
+        return "Illumos";
+    }
     if (os_prefix == "freebsd" or os_prefix == "openbsd" or os_prefix == "netbsd" or
         os_prefix == "dragonfly") {
         return "BSD";
     }
-    if (os_prefix == "illumos") {
-        return "Illumos";
-    }
-
     return "";
 }
 
@@ -252,31 +224,10 @@ inline bool DeclMatchesTarget(Decl const &decl, std::string_view const target) {
         return true;
     }
     std::string_view const targetOs = TargetOsName(target);
-    // Normalize both sides for robust comparison.
-    if (decl.targetOs.size() != targetOs.size()) {
-        return false;
-    }
-    // Case-insensitive comparison handles any casing in @[Target("...")].
-    for (std::size_t i = 0; i < decl.targetOs.size(); ++i) {
-        if (std::tolower(static_cast<unsigned char>(decl.targetOs[i])) !=
-            std::tolower(static_cast<unsigned char>(targetOs[i]))) {
-            return false;
-        }
-    }
-    return true;
-}
-
-// Known platform package names.  If a source file imports one of these
-// and the name does not match the current build target it is a platform-
-// specific import that should have been pruned; skip it gracefully.
-inline bool IsPlatformPackageName(std::string_view const name) {
-    return name == "Windows" or name == "Linux" or name == "macOS" or name == "BSD" or
-           name == "Illumos";
-}
-
-inline bool PlatformPackageMatchesTarget(std::string_view const name,
-                                         std::string_view const target) {
-    return name == TargetOsName(target);
+    return std::ranges::equal(decl.targetOs, targetOs, [](char const a, char const b) {
+        return std::tolower(static_cast<unsigned char>(a)) ==
+               std::tolower(static_cast<unsigned char>(b));
+    });
 }
 
 inline void PruneDeclsForTarget(std::vector<DeclPtr> &decls, std::string_view const target);
@@ -306,105 +257,45 @@ inline std::string DependencyPackageName(Dependency const &dep) {
     return dep.package.empty() ? dep.name : dep.package;
 }
 
-inline std::uintmax_t PeakMemoryBytes() noexcept {
-#if RUX_OS_WINDOWS
-    PROCESS_MEMORY_COUNTERS counters{};
-    if (GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters))) {
-        return static_cast<std::uintmax_t>(counters.PeakWorkingSetSize);
+inline std::string JsonLookupString(std::string_view json, std::string_view key) {
+    std::string const needle = std::format("\"{}\"", key);
+    std::size_t pos = 0;
+
+    while ((pos = json.find(needle, pos)) != std::string_view::npos) {
+        std::size_t i = pos + needle.size();
+
+        while (i < json.size() && std::isspace(static_cast<unsigned char>(json[i]))) {
+            ++i;
+        }
+        if (i >= json.size() or json[i] != ':') {
+            pos = i;
+            continue;
+        }
+        ++i;
+
+        while (i < json.size() && std::isspace(static_cast<unsigned char>(json[i]))) {
+            ++i;
+        }
+        if (i >= json.size() or json[i] != '"') {
+            pos = i;
+            continue;
+        }
+        ++i;
+
+        auto const end = json.find('"', i);
+        if (end == std::string_view::npos) {
+            break;
+        }
+        return std::string(json.substr(i, end - i));
     }
-#elif RUX_IS_UNIX
-    rusage usage{};
-    if (getrusage(RUSAGE_SELF, &usage) == 0) {
-        // macOS reports bytes directly; other Unices report in KB.
-        constexpr std::uintmax_t unitMultiplier = (HostOS == OS::MacOS) ? 1ULL : 1024ULL;
-        return static_cast<std::uintmax_t>(usage.ru_maxrss) * unitMultiplier;
-    }
-#endif
-    return 0;
-}
-
-inline void PrintBuildStats(std::filesystem::path const &exePath, std::string_view profileName,
-                            BuildStats const &stats) {
-    auto const totalMs = stats.total.count();
-    double const seconds = stats.totalSeconds;
-    std::size_t const totalFiles = stats.localFiles + stats.dependencyFiles;
-    std::size_t const totalLines = stats.localLines + stats.dependencyLines;
-    std::size_t const totalTokens = stats.localTokens + stats.dependencyTokens;
-    std::uintmax_t const totalSourceSize = stats.localSourceSize + stats.dependencySourceSize;
-    double const tokenThroughput = seconds > 0.0 ? static_cast<double>(totalTokens) / seconds : 0.0;
-    double const compileSpeed = seconds > 0.0 ? static_cast<double>(totalLines) / seconds : 0.0;
-    double const throughput =
-        seconds > 0.0 ? static_cast<double>(totalSourceSize) / 1024.0 / 1024.0 / seconds : 0.0;
-
-    std::print("Rux Compiler {}\n"
-               "Target: {}\n"
-               "Mode: {}\n\n"
-               "Build finished successfully.\n\n"
-               "Total build time:            {} ms\n"
-               "  Lexing:                    {} ms\n"
-               "  Parsing:                   {} ms\n"
-               "  Semantic:                  {} ms\n"
-               "  HIR:                       {} ms\n"
-               "  LIR:                       {} ms\n"
-               "  Codegen:                   {} ms\n"
-               "  Linking:                   {} ms\n\n"
-               "Total files:                 {}\n"
-               "  Local files:               {}\n"
-               "  Dependency files:          {}\n\n"
-               "Total lines:                 {}\n"
-               "  Local lines:               {}\n"
-               "  Dependency lines:          {}\n\n"
-               "Total tokens:                {}\n"
-               "  Local tokens:              {}\n"
-               "  Dependency tokens:         {}\n\n"
-               "Total source size:           {}\n"
-               "  Local source size:         {}\n"
-               "  Dependency source size:    {}\n\n"
-               "Output:\n"
-               "  Executable:                {}\n"
-               "  Executable size:           {}\n"
-               "  Peak memory:               {}\n\n"
-               "Performance:\n"
-               "  Compile speed:             {} LOC/s\n"
-               "  Token throughput:          {}\n"
-               "  Total throughput:          {} MB/s\n",
-               RUX_VERSION, TargetName(), profileName, totalMs, stats.lexing.count(),
-               stats.parsing.count(), stats.semantic.count(), stats.hir.count(), stats.lir.count(),
-               stats.codegen.count(), stats.linking.count(), FormatNumber(totalFiles),
-               FormatNumber(stats.localFiles), FormatNumber(stats.dependencyFiles),
-               FormatNumber(totalLines), FormatNumber(stats.localLines),
-               FormatNumber(stats.dependencyLines), FormatNumber(totalTokens),
-               FormatNumber(stats.localTokens), FormatNumber(stats.dependencyTokens),
-               FormatSize(totalSourceSize), FormatSize(stats.localSourceSize),
-               FormatSize(stats.dependencySourceSize), exePath.filename().string(),
-               FormatSize(stats.executableSize), FormatSize(stats.peakMemoryBytes),
-               FormatNumber(std::llround(compileSpeed)), FormatTokenThroughput(tokenThroughput),
-               FormatDecimal(throughput, 2));
-}
-
-inline void PrintBuildSummary(std::filesystem::path const &exePath, std::string_view profileName,
-                              BuildStats const &stats) {
-    auto const totalMs = stats.total.count();
-    std::size_t const totalFiles = stats.localFiles + stats.dependencyFiles;
-    std::size_t const totalLines = stats.localLines + stats.dependencyLines;
-    std::size_t const totalTokens = stats.localTokens + stats.dependencyTokens;
-    double const compileSpeed =
-        stats.totalSeconds > 0.0 ? static_cast<double>(totalLines) / stats.totalSeconds : 0.0;
-
-    std::print("Built `{}` [{}] in {} ms\n", profileName, exePath.string(), totalMs);
-    std::print("{} files | {} LOC | {} tokens | {} LOC/s | {} {}\n", FormatNumber(totalFiles),
-               FormatNumber(totalLines), FormatCompactNumber(static_cast<double>(totalTokens)),
-               FormatCompactNumber(compileSpeed), exePath.filename().string(),
-               FormatSize(stats.executableSize));
+    return {};
 }
 
 inline std::optional<std::filesystem::path> RequireManifest() {
     auto path = Manifest::Find();
     if (!path) {
-        std::print(stderr,
-                   "error: could not find 'Rux.toml' in '{}' or any parent "
-                   "directory\n",
-                   std::filesystem::current_path().string());
+        std::println(stderr, "error: could not find 'Rux.toml' in '{}' or any parent directory",
+                     std::filesystem::current_path().string());
     }
     return path;
 }
@@ -412,7 +303,7 @@ inline std::optional<std::filesystem::path> RequireManifest() {
 inline std::optional<Manifest> LoadManifest(std::filesystem::path const &path) {
     auto m = Manifest::Load(path);
     if (!m) {
-        std::print(stderr, "error: failed to parse '{}'\n", path.string());
+        std::println(stderr, "error: failed to parse '{}'", path.string());
     }
     return m;
 }
@@ -426,60 +317,171 @@ inline std::filesystem::path ResolveBuildOutputDir(std::filesystem::path const &
     if (output.is_relative()) {
         output = root / output;
     }
-    return (output / std::string(profileName)).lexically_normal();
+    return (output / profileName).lexically_normal();
+}
+
+inline void PrintBuildStats(std::filesystem::path const &exePath, std::string_view profileName,
+                            BuildStats const &stats) {
+    double const seconds = stats.totalSeconds;
+    std::size_t const totalFiles = stats.localFiles + stats.dependencyFiles;
+    std::size_t const totalLines = stats.localLines + stats.dependencyLines;
+    std::size_t const totalTokens = stats.localTokens + stats.dependencyTokens;
+    std::uintmax_t const totalSourceSize = stats.localSourceSize + stats.dependencySourceSize;
+
+    double const tokenThroughput = seconds > 0.0 ? static_cast<double>(totalTokens) / seconds : 0.0;
+    double const compileSpeed = seconds > 0.0 ? static_cast<double>(totalLines) / seconds : 0.0;
+    double const throughput =
+        seconds > 0.0 ? static_cast<double>(totalSourceSize) / 1024.0 / 1024.0 / seconds : 0.0;
+
+    std::println("Rux Compiler {}\n"
+                 "Target: {}\n"
+                 "Mode: {}\n\n"
+                 "Build finished successfully.\n\n"
+                 "Total build time:            {} ms\n"
+                 "  Lexing:                    {} ms\n"
+                 "  Parsing:                   {} ms\n"
+                 "  Semantic:                  {} ms\n"
+                 "  HIR:                       {} ms\n"
+                 "  LIR:                       {} ms\n"
+                 "  Codegen:                   {} ms\n"
+                 "  Linking:                   {} ms\n\n"
+                 "Total files:                 {}\n"
+                 "  Local files:               {}\n"
+                 "  Dependency files:          {}\n\n"
+                 "Total lines:                 {}\n"
+                 "  Local lines:               {}\n"
+                 "  Dependency lines:          {}\n\n"
+                 "Total tokens:                {}\n"
+                 "  Local tokens:              {}\n"
+                 "  Dependency tokens:         {}\n\n"
+                 "Total source size:           {}\n"
+                 "  Local source size:         {}\n"
+                 "  Dependency source size:    {}\n\n"
+                 "Output:\n"
+                 "  Executable:                {}\n"
+                 "  Executable size:           {}\n"
+                 "  Peak memory:               {}\n\n"
+                 "Performance:\n"
+                 "  Compile speed:             {} LOC/s\n"
+                 "  Token throughput:          {}\n"
+                 "  Total throughput:          {} MB/s",
+                 RUX_VERSION, TargetName(), profileName, stats.total.count(), stats.lexing.count(),
+                 stats.parsing.count(), stats.semantic.count(), stats.hir.count(),
+                 stats.lir.count(), stats.codegen.count(), stats.linking.count(),
+                 FormatNumber(totalFiles), FormatNumber(stats.localFiles),
+                 FormatNumber(stats.dependencyFiles), FormatNumber(totalLines),
+                 FormatNumber(stats.localLines), FormatNumber(stats.dependencyLines),
+                 FormatNumber(totalTokens), FormatNumber(stats.localTokens),
+                 FormatNumber(stats.dependencyTokens), FormatSize(totalSourceSize),
+                 FormatSize(stats.localSourceSize), FormatSize(stats.dependencySourceSize),
+                 exePath.filename().string(), FormatSize(stats.executableSize),
+                 FormatSize(stats.peakMemoryBytes), FormatNumber(std::llround(compileSpeed)),
+                 FormatTokenThroughput(tokenThroughput), FormatDecimal(throughput, 2));
+}
+
+inline void PrintBuildSummary(std::filesystem::path const &exePath, std::string_view profileName,
+                              BuildStats const &stats) {
+    std::size_t const totalFiles = stats.localFiles + stats.dependencyFiles;
+    std::size_t const totalLines = stats.localLines + stats.dependencyLines;
+    std::size_t const totalTokens = stats.localTokens + stats.dependencyTokens;
+    double const compileSpeed =
+        stats.totalSeconds > 0.0 ? static_cast<double>(totalLines) / stats.totalSeconds : 0.0;
+
+    std::println("Built `{}` [{}] in {} ms", profileName, exePath.string(), stats.total.count());
+    std::println("{} files | {} LOC | {} tokens | {} LOC/s | {} {}", FormatNumber(totalFiles),
+                 FormatNumber(totalLines), FormatCompactNumber(static_cast<double>(totalTokens)),
+                 FormatCompactNumber(compileSpeed), exePath.filename().string(),
+                 FormatSize(stats.executableSize));
+}
+
+#if RUX_OS_WINDOWS
+
+inline std::uintmax_t PeakMemoryBytes() noexcept {
+    PROCESS_MEMORY_COUNTERS counters{};
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters))) {
+        return static_cast<std::uintmax_t>(counters.PeakWorkingSetSize);
+    }
+    return 0;
 }
 
 inline std::filesystem::path RegistryPackagesDir() {
-#if RUX_OS_WINDOWS
     wchar_t buf[MAX_PATH]{};
     GetEnvironmentVariableW(L"LOCALAPPDATA", buf, MAX_PATH);
     return std::filesystem::path(buf) / "Rux" / "Packages";
-#else
-    char const *home = getenv("HOME");
-    return std::filesystem::path(home ? home : "/tmp") / ".rux" / "packages";
-#endif
 }
-} // namespace Rux::Misc
 
-inline constexpr std::string_view kRegistryUrl =
-    "https://raw.githubusercontent.com/rux-lang/Registry/refs/heads/main/"
-    "Packages.json";
-
-#if RUX_OS_WINDOWS
-// Fetch the body of an HTTPS URL using WinHTTP. Returns nullopt on failure.
 inline std::optional<std::string> FetchUrl(std::string const &url) {
-    std::string cmd = "curl -s " + url;
+    std::string cmd = std::format("curl -s \"{}\"", url);
     std::array<char, 128> buffer;
     std::string result;
 
     FILE *pipe = _popen(cmd.c_str(), "r");
-
     if (!pipe) {
         return std::nullopt;
     }
 
-    while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
+    while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr) {
         result += buffer.data();
     }
-
     _pclose(pipe);
     return result;
 }
-#else
-inline std::string ShellQuote(std::string const &value) {
-    std::size_t single_quotes = 0;
-    for (std::size_t i = 0; i < value.size(); ++i) {
-        if (value[i] == '\'') {
-            ++single_quotes;
-        }
+
+inline bool ExecuteGitCommand(std::wstring const &cmd) {
+    std::vector<wchar_t> mutableCmd(cmd.begin(), cmd.end());
+    mutableCmd.push_back(L'\0');
+
+    STARTUPINFOW si{sizeof(si)};
+    PROCESS_INFORMATION pi{};
+
+    if (!CreateProcessW(nullptr, mutableCmd.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr,
+                        &si, &pi)) {
+        return false;
     }
 
-    std::string quoted;
-    quoted.reserve(value.size() + (single_quotes * 3) + 2);
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    DWORD exitCode = 1;
+    GetExitCodeProcess(pi.hProcess, &exitCode);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    return exitCode == 0;
+}
 
+inline bool GitClone(std::string const &repoUrl, std::filesystem::path const &dest,
+                     bool const devBranch) {
+    std::wstring const wRepoUrl(repoUrl.begin(), repoUrl.end());
+    std::wstring cmd =
+        devBranch ? std::format(L"git clone --branch dev {} \"{}\"", wRepoUrl, dest.wstring())
+                  : std::format(L"git clone {} \"{}\"", wRepoUrl, dest.wstring());
+    return ExecuteGitCommand(cmd);
+}
+
+inline bool GitPull(std::filesystem::path const &repoDir) {
+    std::wstring cmd = std::format(L"git -C \"{}\" pull", repoDir.wstring());
+    return ExecuteGitCommand(cmd);
+}
+
+#else
+
+inline std::uintmax_t PeakMemoryBytes() noexcept {
+    rusage usage{};
+    if (getrusage(RUSAGE_SELF, &usage) == 0) {
+        constexpr std::uintmax_t unitMultiplier = (HostOS == OS::MacOS) ? 1ULL : 1024ULL;
+        return static_cast<std::uintmax_t>(usage.ru_maxrss) * unitMultiplier;
+    }
+    return 0;
+}
+
+inline std::filesystem::path RegistryPackagesDir() {
+    char const *home = getenv("HOME");
+    return std::filesystem::path(home ? home : "/tmp") / ".rux" / "packages";
+}
+
+inline std::string ShellQuote(std::string_view const value) {
+    std::string quoted;
+    quoted.reserve(value.size() + (std::ranges::count(value, '\'') * 3) + 2);
     quoted += '\'';
-    for (std::size_t i = 0; i < value.size(); ++i) {
-        char const ch = value[i];
+    for (char const ch : value) {
         if (ch == '\'') {
             quoted += "'\\''";
         }
@@ -499,13 +501,11 @@ inline std::optional<std::string> RunCommandCapture(std::string const &command) 
 
     std::string output;
     std::array<char, 4096> buffer{};
-
-    while (::fgets(buffer.data(), buffer.size(), pipe)) {
+    while (::fgets(buffer.data(), static_cast<int>(buffer.size()), pipe)) {
         output.append(buffer.data());
     }
 
-    int const status = ::pclose(pipe);
-    if (!WIFEXITED(status) or WEXITSTATUS(status) != 0) {
+    if (int const status = ::pclose(pipe); !WIFEXITED(status) or WEXITSTATUS(status) != 0) {
         return std::nullopt;
     }
     return output;
@@ -518,11 +518,28 @@ inline std::optional<std::string> FetchUrl(std::string const &url) {
     }
     return RunCommandCapture("wget -qO- " + quotedUrl);
 }
-#endif
+
+inline bool GitClone(std::string const &repoUrl, std::filesystem::path const &dest,
+                     bool const devBranch) {
+    std::string const quotedUrl = ShellQuote(repoUrl);
+    std::string const quotedDest = ShellQuote(dest.string());
+    std::string const cmd =
+        std::format("git clone {} {} {}", devBranch ? "-b dev" : "", quotedUrl, quotedDest);
+    return std::system(cmd.c_str()) == 0;
+}
+
+inline bool GitPull(std::filesystem::path const &repoDir) {
+    std::string const quotedDir = ShellQuote(repoDir.string());
+    std::string const cmd = std::format("git -C {} pull", quotedDir);
+    return std::system(cmd.c_str()) == 0;
+}
+
+#endif // RUX_OS_WINDOWS
+
+} // namespace Rux::Misc
 
 namespace Rux {
 
-// Parse global options from the command line arguments.
 inline GlobalOptions Cli::ParseGlobalOptions(std::span<std::string_view const> args) {
     GlobalOptions opts;
     for (std::size_t i = 0; i < args.size(); ++i) {
@@ -564,107 +581,4 @@ inline GlobalOptions Cli::ParseGlobalOptions(std::span<std::string_view const> a
     return opts;
 }
 
-// Lookup a string value in a flat JSON object: { "Key": "value", ... }
-inline std::string JsonLookupString(std::string_view json, std::string_view key) {
-    std::string const needle = "\"" + std::string(key) + "\"";
-    std::size_t pos = 0;
-    while ((pos = json.find(needle, pos)) != std::string_view::npos) {
-        std::size_t i = pos + needle.size();
-        while (i < json.size() and
-               (json[i] == ' ' or json[i] == '\t' or json[i] == '\r' or json[i] == '\n')) {
-            ++i;
-        }
-        if (i >= json.size() or json[i] != ':') {
-            pos = i;
-            continue;
-        }
-        ++i;
-        while (i < json.size() and
-               (json[i] == ' ' or json[i] == '\t' or json[i] == '\r' or json[i] == '\n')) {
-            ++i;
-        }
-        if (i >= json.size() or json[i] != '"') {
-            pos = i;
-            continue;
-        }
-        ++i;
-        auto const end = json.find('"', i);
-        if (end == std::string_view::npos) {
-            break;
-        }
-        return std::string(json.substr(i, end - i));
-    }
-    return {};
-}
-
-// Resolve the build output directory for a given profile.
-inline std::filesystem::path ResolveBuildOutputDir(std::filesystem::path const &root,
-                                                   Manifest const &manifest,
-                                                   std::string_view profileName) {
-    std::filesystem::path output = manifest.build.output.empty()
-                                     ? std::filesystem::path("bin")
-                                     : std::filesystem::path(manifest.build.output);
-    if (output.is_relative()) {
-        output = root / output;
-    }
-    return (output / std::string(profileName)).lexically_normal();
-}
-
-// Clone a git repository into dest. Returns true on success.
-inline bool GitClone(std::string const &repoUrl, std::filesystem::path const &dest,
-                     bool const devBranch) {
-#if RUX_OS_WINDOWS
-    std::wstring cmd{};
-    if (!devBranch) {
-        cmd = L"git clone " + std::wstring(repoUrl.begin(), repoUrl.end()) + L" \"" +
-              dest.wstring() + L"\"";
-    }
-    else {
-        cmd = L"git clone --branch dev " + std::wstring(repoUrl.begin(), repoUrl.end()) + L" \"" +
-              dest.wstring() + L"\"";
-    }
-    STARTUPINFOW si{};
-    si.cb = sizeof(si);
-    PROCESS_INFORMATION pi{};
-    if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si,
-                        &pi)) {
-        return false;
-    }
-    WaitForSingleObject(pi.hProcess, INFINITE);
-    DWORD exitCode = 1;
-    GetExitCodeProcess(pi.hProcess, &exitCode);
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-    return exitCode == 0;
-#else
-    std::string const cmd = devBranch ? "git clone -b dev " + repoUrl + " \"" + dest.string() + "\""
-                                      : "git clone " + repoUrl + " \"" + dest.string() + "\"";
-    return std::system(cmd.c_str()) == 0;
-#endif
-}
-
-// Pull latest changes in an existing git repository. Returns true on
-// success.
-inline bool GitPull(std::filesystem::path const &repoDir) {
-#if RUX_OS_WINDOWS
-    std::wstring cmd = L"git -C \"" + repoDir.wstring() + L"\" pull";
-    STARTUPINFOW si{};
-    si.cb = sizeof(si);
-    PROCESS_INFORMATION pi{};
-    if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si,
-                        &pi)) {
-        return false;
-    }
-    WaitForSingleObject(pi.hProcess, INFINITE);
-    DWORD exitCode = 1;
-    GetExitCodeProcess(pi.hProcess, &exitCode);
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-    return exitCode == 0;
-#else
-    std::string const cmd = "git -C \"" + repoDir.string() + "\" pull";
-    return std::system(cmd.c_str()) == 0;
-#endif
-}
-
-}; // namespace Rux
+} // namespace Rux
