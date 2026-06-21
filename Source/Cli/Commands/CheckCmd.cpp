@@ -1,61 +1,20 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
-#include "Rux/Ast.h"              // for Decl, UseDecl, Module, ModuleDecl
-#include "Rux/Cli/Cli.h"          // for GlobalOptions, Cli
-#include "Rux/Cli/CliInternals.h" // for DependencyPackageName, HostTargetTriple, PruneModuleFo...
-#include "Rux/Lexer.h"            // for LexerResult, LexerDiagnostic, Lexer
-#include "Rux/Manifest.h"         // for Dependency, Manifest, Package
-#include "Rux/Parser.h"           // for ParseResult, ParserDiagnostic, Parser
-#include "Rux/Platform/Defines.h" // for RUX_OS_WINDOWS
-#include "Rux/Platform/Types.h"   // for Platform
-#include "Rux/Sema.h"             // for DepPackage, SemaDiagnostic, Sema, SemaResult
-#include "Rux/SourceLoader.h"     // for SourceFile, SourceLoadResult, SourceLoader
-#include "Rux/Token.h"            // for Token, SourceLocation
+#include "Rux/Ast.h"
+#include "Rux/Cli/CliInternals.h"
+#include "Rux/Manifest.h"
+#include "Rux/Sema.h"
+#include "Rux/SourceLoader.h"
 
-#include <cstdio>     // for size_t, stderr, snprintf
-#include <filesystem> // for path, operator/, exists
-#include <functional> // for function
-#include <limits>     // for numeric_limits
-#include <memory>     // for unique_ptr
-#include <optional>   // for optional
-#include <print>      // for print
-#include <ranges>
-#include <span>          // for span
-#include <string>        // for basic_string, char_traits, string, hash, allocator
-#include <string_view>   // for basic_string_view, operator==, string_view
-#include <unordered_map> // for unordered_map
-#include <unordered_set> // for unordered_set
-#include <utility>       // for move, get
-#include <vector>        // for vector
+#include <filesystem>
+#include <functional>
+#include <string>
+#include <unordered_set>
 
-/*
- * This is separate from the other ifdef because otherwise clang-format attempts
- * to change the order, which makes MSVC cry.
- */
+namespace Rux {
 
-#if RUX_OS_WINDOWS
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-
-    #include <windows.h>
-#endif
-
-#if RUX_OS_WINDOWS
-    #include <psapi.h>
-#else
-    #include <sys/wait.h>
-#endif
-
-using namespace Rux;
-using namespace Platform;
-using namespace Misc;
-
+namespace {
 struct JsonDiagnostic {
     std::string file;
     int line = 0;
@@ -76,7 +35,7 @@ struct ImportCollector {
 
     void collect(Decl const &decl) {
         if (auto const *ud = dynamic_cast<UseDecl const *>(&decl)) {
-            if (DeclMatchesTarget(*ud, target) and !ud->path.empty()) {
+            if (Misc::DeclMatchesTarget(*ud, target) and !ud->path.empty()) {
                 imports.push_back(ud->path.front());
             }
             return;
@@ -163,11 +122,11 @@ using DiagnosticEmitter =
     std::filesystem::path depRoot;
 
     if (targetDep.path.empty()) {
-        depRoot = RegistryPackagesDir() / DependencyPackageName(targetDep);
+        depRoot = Misc::RegistryPackagesDir() / Misc::DependencyPackageName(targetDep);
         if (!std::filesystem::exists(depRoot)) {
             EmitDiag("", 0, 0, "error",
                      std::format("package '{}' is not installed — run 'rux install'",
-                                 DependencyPackageName(targetDep)));
+                                 Misc::DependencyPackageName(targetDep)));
             return false;
         }
     }
@@ -241,7 +200,7 @@ using DiagnosticEmitter =
     }
 
     Sema sema(std::move(userModules), std::move(depPackages), manifest.package.name,
-              std::string(TargetOsName(targetName)));
+              std::string(Misc::TargetOsName(targetName)));
     auto semaResult = sema.Analyze();
 
     bool hadErrors = semaResult.HasErrors();
@@ -331,7 +290,7 @@ using DiagnosticEmitter =
                 break;
             }
 
-            PruneModuleForTarget(depParse.module, targetName);
+            Misc::PruneModuleForTarget(depParse.module, targetName);
             packageParseResults.push_back(std::move(depParse));
         }
 
@@ -373,6 +332,7 @@ using DiagnosticEmitter =
     }
     return true;
 }
+} // namespace
 
 int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &opts) {
     bool jsonOutput = false;
@@ -422,7 +382,7 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
         hasFatalError = true;
     };
 
-    auto const manifestPath = RequireManifest();
+    auto const manifestPath = Misc::RequireManifest();
     if (!manifestPath) {
         if (jsonOutput) {
             EmitFatal("could not find 'Rux.toml' in current directory or any parent directory");
@@ -430,7 +390,7 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
         return 1;
     }
 
-    auto const manifest = LoadManifest(*manifestPath);
+    auto const manifest = Misc::LoadManifest(*manifestPath);
     if (!manifest) {
         if (jsonOutput) {
             EmitFatal("failed to parse 'Rux.toml'");
@@ -438,8 +398,8 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
         return 1;
     }
 
-    std::string targetName = target.empty() ? HostTargetTriple() : std::string(target);
-    if (!IsSupportedTargetTriple(targetName)) {
+    std::string targetName = target.empty() ? Misc::HostTargetTriple() : std::string(target);
+    if (!Misc::IsSupportedTargetTriple(targetName)) {
         if (jsonOutput) {
             EmitFatal(std::format("unsupported target '{}'", targetName));
         }
@@ -453,7 +413,7 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
         return 1;
     }
 
-    if (std::string const hostTarget = HostTargetTriple();
+    if (std::string const hostTarget = Misc::HostTargetTriple();
         hostTarget != "unknown" and targetName != hostTarget) {
         constexpr std::string_view err =
             "cross-target build from '{}' to '{}' is not supported yet";
@@ -542,7 +502,7 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
         }
 
         if (!parseResult.HasErrors()) {
-            PruneModuleForTarget(parseResult.module, targetName);
+            Misc::PruneModuleForTarget(parseResult.module, targetName);
             parseResults.push_back(std::move(parseResult));
         }
     }
@@ -602,3 +562,4 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
 
     return hasFatalError ? 1 : 0;
 }
+} // namespace Rux

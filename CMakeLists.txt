@@ -76,12 +76,24 @@ target_link_libraries(rux_tooling
 
 add_library(rux_cli STATIC
         Source/Cli/Cli.cpp
+        Source/Cli/Commands/AddCmd.cpp
+        Source/Cli/Commands/BuildCmd.cpp
+        Source/Cli/Commands/CheckCmd.cpp
+        Source/Cli/Commands/CleanCmd.cpp
+        Source/Cli/Commands/DocCmd.cpp
+        Source/Cli/Commands/FmtCmd.cpp
         Source/Cli/Commands/HelpCmd.cpp
-        Source/Cli/Commands/Base/BuildCmd.cpp
-        Source/Cli/Commands/Base/CheckCmd.cpp
-        Source/Cli/Commands/Base/InstallCmd.cpp
-        Source/Cli/Commands/Base/PackageCmd.cpp
-        Source/Cli/Commands/Base/UtilityCmd.cpp
+        Source/Cli/Commands/InfoCmd.cpp
+        Source/Cli/Commands/InitCmd.cpp
+        Source/Cli/Commands/InstallCmd.cpp
+        Source/Cli/Commands/ListCmd.cpp
+        Source/Cli/Commands/NewCmd.cpp
+        Source/Cli/Commands/RemoveCmd.cpp
+        Source/Cli/Commands/RunCmd.cpp
+        Source/Cli/Commands/TestCmd.cpp
+        Source/Cli/Commands/UninstallCmd.cpp
+        Source/Cli/Commands/UpdateCmd.cpp
+        Source/Cli/Commands/VersionCmd.cpp
 )
 
 target_link_libraries(rux_cli

@@ -1,46 +1,29 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
-#include "Rux/Cli/Cli.h"
+
 #include "Rux/Cli/CliInternals.h"
-#include "Rux/Manifest.h"
-#include "Rux/Platform/Types.h"
 
-#include <cstdio>
 #include <filesystem>
-#include <memory>
-#include <optional>
 #include <print>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-#include <vector>
 
-using namespace Rux;
-using namespace Platform;
-using namespace Misc;
-
+namespace Rux {
 namespace {
 
 enum class DependencyState {
     Visiting,
     Visited,
 };
-enum class UninstallResult {
-    Success,
-    NotFound,
-    Error,
-};
 
 struct RegistryAccess {
     std::optional<std::string> json;
 
     static RegistryAccess Fetch() {
-        return {FetchUrl(std::string(kRegistryUrl))};
+        return {Misc::FetchUrl(std::string(Misc::kRegistryUrl))};
     }
 
     std::string Lookup(std::string_view const pkgName) const {
-        return json ? JsonLookupString(*json, pkgName) : "";
+        return json ? Misc::JsonLookupString(*json, pkgName) : "";
     }
 };
 
@@ -64,11 +47,11 @@ public:
 
         visitState_[pkgKey] = DependencyState::Visiting;
 
-        auto const manifestPath = RegistryPackagesDir() / pkgName / "Rux.toml";
+        auto const manifestPath = Misc::RegistryPackagesDir() / pkgName / "Rux.toml";
         if (auto const manifest = LoadManifestCached(pkgKey, manifestPath); manifest) {
             for (auto const &dep : manifest->EffectiveDependencies(target_)) {
                 if (dep.path.empty()) {
-                    if (!Resolve(DependencyPackageName(dep), installOrder)) {
+                    if (!Resolve(Misc::DependencyPackageName(dep), installOrder)) {
                         return false;
                     }
                 }
@@ -110,7 +93,7 @@ bool PerformInstall(std::string_view pkgName, RegistryAccess const &registry, bo
         return false;
     }
 
-    std::filesystem::path const pkgDir = RegistryPackagesDir() / pkgName;
+    std::filesystem::path const pkgDir = Misc::RegistryPackagesDir() / pkgName;
     std::error_code ec;
     std::filesystem::create_directories(pkgDir.parent_path(), ec);
     if (ec) {
@@ -129,7 +112,7 @@ bool PerformInstall(std::string_view pkgName, RegistryAccess const &registry, bo
         std::print("  Downloading {} from {}...\n", pkgName, repoUrl);
     }
 
-    if (!GitClone(repoUrl, pkgDir, dev)) {
+    if (!Misc::GitClone(repoUrl, pkgDir, dev)) {
         std::print(stderr, "error: failed to clone '{}'\n", repoUrl);
         return false;
     }
@@ -138,28 +121,6 @@ bool PerformInstall(std::string_view pkgName, RegistryAccess const &registry, bo
         std::print("    Installed {} at {}\n", pkgName, pkgDir.string());
     }
     return true;
-}
-
-UninstallResult PerformUninstall(std::string_view pkgName, bool quiet) {
-    std::filesystem::path const pkgDir = RegistryPackagesDir() / pkgName;
-    if (!std::filesystem::exists(pkgDir)) {
-        if (!quiet) {
-            std::print("  Not installed {}\n", pkgName);
-        }
-        return UninstallResult::NotFound;
-    }
-
-    std::error_code ec;
-    std::filesystem::remove_all(pkgDir, ec);
-    if (ec) {
-        std::print(stderr, "error: failed to remove '{}': {}\n", pkgDir.string(), ec.message());
-        return UninstallResult::Error;
-    }
-
-    if (!quiet) {
-        std::print("    Uninstalled {}\n", pkgName);
-    }
-    return UninstallResult::Success;
 }
 
 } // namespace
@@ -198,21 +159,21 @@ int Cli::RunInstall(std::span<std::string_view const> args, GlobalOptions const 
     }
 
     // Dependency install mode
-    auto const manifestPath = RequireManifest();
+    auto const manifestPath = Misc::RequireManifest();
     if (!manifestPath) {
         return 1;
     }
-    auto const manifest = LoadManifest(*manifestPath);
+    auto const manifest = Misc::LoadManifest(*manifestPath);
     if (!manifest) {
         return 1;
     }
 
-    DependencyResolver resolver(HostTargetTriple());
+    DependencyResolver resolver(Misc::HostTargetTriple());
     std::vector<std::string> installOrder;
 
-    for (auto const &dep : manifest->EffectiveDependencies(HostTargetTriple())) {
+    for (auto const &dep : manifest->EffectiveDependencies(Misc::HostTargetTriple())) {
         if (dep.path.empty()) {
-            if (!resolver.Resolve(DependencyPackageName(dep), installOrder)) {
+            if (!resolver.Resolve(Misc::DependencyPackageName(dep), installOrder)) {
                 return 1;
             }
         }
@@ -220,7 +181,7 @@ int Cli::RunInstall(std::span<std::string_view const> args, GlobalOptions const 
 
     int installed = 0, upToDate = 0;
     for (auto const &pkgName : installOrder) {
-        bool exists = std::filesystem::exists(RegistryPackagesDir() / pkgName);
+        bool exists = std::filesystem::exists(Misc::RegistryPackagesDir() / pkgName);
         if (PerformInstall(pkgName, registry, packageFromDev, opts.quiet)) {
             exists ? ++upToDate : ++installed;
         }
@@ -234,55 +195,4 @@ int Cli::RunInstall(std::span<std::string_view const> args, GlobalOptions const 
     }
     return 0;
 }
-
-int Cli::RunUninstall(std::span<std::string_view const> args, GlobalOptions const &opts) {
-    std::string_view packageName;
-
-    for (auto const &arg : args) {
-        if (arg == "-h" or arg == "--help") {
-            PrintHelpFor("uninstall");
-            return 0;
-        }
-        if (!arg.starts_with('-') and packageName.empty()) {
-            packageName = arg;
-        }
-        else {
-            PrintUnknownOption(arg, "uninstall");
-            return 1;
-        }
-    }
-
-    // Single uninstall mode
-    if (!packageName.empty()) {
-        return (PerformUninstall(packageName, opts.quiet) == UninstallResult::Error) ? 1 : 0;
-    }
-
-    // Full manifest uninstall mode
-    auto const manifestPath = RequireManifest();
-    if (!manifestPath) {
-        return 1;
-    }
-
-    auto const manifest = LoadManifest(*manifestPath);
-    if (!manifest) {
-        return 1;
-    }
-
-    int removed = 0, notFound = 0;
-    for (auto const &dep : manifest->EffectiveDependencies(HostTargetTriple())) {
-        if (!dep.path.empty()) {
-            continue;
-        }
-
-        UninstallResult const result = PerformUninstall(DependencyPackageName(dep), opts.quiet);
-        if (result == UninstallResult::Error) {
-            return 1;
-        }
-        (result == UninstallResult::Success) ? ++removed : ++notFound;
-    }
-
-    if (!opts.quiet) {
-        std::print("     Summary: {} uninstalled, {} not installed\n", removed, notFound);
-    }
-    return 0;
-}
+} // namespace Rux

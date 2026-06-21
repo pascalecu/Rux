@@ -1,21 +1,15 @@
 // Copyright (c) Rux contributors.
 // SPDX-License-Identifier: MIT
 
-#include "Rux/Cli/Cli.h"          // for Cli
-#include "Rux/Platform/Defines.h" // for RUX_OS_WINDOWS
-#include "Rux/Version.h"          // for RUX_BUILD_DATE, RUX_BUILD_TIME, RUX_VERSION
+#include "Rux/Cli/Cli.h"
+#include "Rux/Platform/Defines.h"
 
-#include <algorithm>   // for max, __any_of, any_of, __adjacent_find, __all_of, __is...
-#include <array>       // for array
-#include <concepts>    // for convertible_to
-#include <cstdio>      // for size_t, stderr
-#include <functional>  // for less, invoke, equal_to, identity
-#include <iterator>    // for size, indirect_result_t
-#include <print>       // for println, print
-#include <ranges>      // for input_range, iterator_t
-#include <span>        // for span
-#include <string>      // for char_traits
-#include <string_view> // for basic_string_view, string_view, operator<=>, operator==
+#include <Rux/Version.h>
+#include <algorithm>
+#include <functional>
+#include <print>
+#include <span>
+#include <string_view>
 
 #if RUX_OS_WINDOWS
     #ifndef WIN32_LEAN_AND_MEAN
@@ -30,7 +24,6 @@
     #if defined(__has_include)
         // for winsize
         #if __has_include(<sys/termios.h>)
-            #include <sys/termios.h>
         #elif __has_include(<termios.h>)
             #include <termios.h>
         #endif
@@ -705,4 +698,15 @@ void Cli::PrintUnknownOption(std::string_view option, std::string_view command) 
                      command);
     }
 }
+
+int Cli::RunHelp(std::span<std::string_view const> args, GlobalOptions const &) {
+    if (!args.empty()) {
+        PrintHelpFor(args.front());
+    }
+    else {
+        PrintHelp();
+    }
+    return 0;
+}
+
 } // namespace Rux
